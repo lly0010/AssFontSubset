@@ -89,20 +89,20 @@ func Run() {
 func (u *ui) buildSubsetTab() fyne.CanvasObject {
 	u.assList = widget.NewList(
 		func() int { return len(u.assFiles) },
-		func() fyne.CanvasObject { return widget.NewLabel("") },
-		func(i widget.ListItemID, o fyne.CanvasObject) { o.(*widget.Label).SetText(u.assFiles[i]) },
+		func() fyne.CanvasObject { return newTappableRow(u.win, u.deleteAssAt) },
+		func(i widget.ListItemID, o fyne.CanvasObject) { o.(*tappableRow).setItem(i, u.assFiles[i]) },
 	)
 	u.assList.OnSelected = func(id widget.ListItemID) { u.assSel = id }
 
 	addBtn := widget.NewButton("添加文件 Add Files", u.openAssFiles)
 	addDirBtn := widget.NewButton("添加目录 Add Folder", u.openAssFolder)
-	removeBtn := widget.NewButton("移除选中 Remove", u.removeSelectedAss)
 	clearBtn := widget.NewButton("清空 Clear", func() {
 		u.assFiles = nil
 		u.assSel = -1
 		u.assList.Refresh()
 	})
-	assButtons := container.NewHBox(addBtn, addDirBtn, removeBtn, clearBtn)
+	hint := widget.NewLabel("（右键单项删除 / right-click an item to remove）")
+	assButtons := container.NewHBox(addBtn, addDirBtn, clearBtn, hint)
 
 	u.output = widget.NewEntry()
 	u.output.SetText(u.settings.OutputFolder)
@@ -172,20 +172,13 @@ func (u *ui) buildSubsetTab() fyne.CanvasObject {
 func (u *ui) buildLibraryTab() fyne.CanvasObject {
 	u.libList = widget.NewList(
 		func() int { return len(u.libDirs) },
-		func() fyne.CanvasObject { return widget.NewLabel("") },
-		func(i widget.ListItemID, o fyne.CanvasObject) { o.(*widget.Label).SetText(u.libDirs[i]) },
+		func() fyne.CanvasObject { return newTappableRow(u.win, u.deleteLibAt) },
+		func(i widget.ListItemID, o fyne.CanvasObject) { o.(*tappableRow).setItem(i, u.libDirs[i]) },
 	)
 	u.libList.OnSelected = func(id widget.ListItemID) { u.libSel = id }
 
 	addBtn := widget.NewButton("添加目录 Add Folder", u.pickLibFolder)
-	removeBtn := widget.NewButton("移除 Remove", func() {
-		if u.libSel >= 0 && u.libSel < len(u.libDirs) {
-			u.libDirs = append(u.libDirs[:u.libSel], u.libDirs[u.libSel+1:]...)
-			u.libSel = -1
-			u.libList.Refresh()
-			u.persist()
-		}
-	})
+	libHint := widget.NewLabel("（右键单项删除 / right-click an item to remove）")
 
 	u.dbPath = widget.NewEntry()
 	u.dbPath.SetText(u.settings.DatabasePath)
@@ -209,7 +202,7 @@ func (u *ui) buildLibraryTab() fyne.CanvasObject {
 		},
 	)
 
-	libButtons := container.NewHBox(addBtn, removeBtn)
+	libButtons := container.NewHBox(addBtn, libHint)
 	dbRow := withBrowse(u.dbPath, dbBrowse)
 	header := container.NewVBox(
 		widget.NewLabel("字体库目录 Library Folders"),
@@ -324,15 +317,27 @@ func (u *ui) buildDatabase() {
 
 // -------------------------------------------------------------------- helpers
 
-// removeSelectedAss removes the currently selected subtitle from the list.
-func (u *ui) removeSelectedAss() {
-	if u.assSel < 0 || u.assSel >= len(u.assFiles) {
+// deleteAssAt removes the subtitle at id (used by the row right-click menu).
+func (u *ui) deleteAssAt(id widget.ListItemID) {
+	if id < 0 || int(id) >= len(u.assFiles) {
 		return
 	}
-	u.assFiles = append(u.assFiles[:u.assSel], u.assFiles[u.assSel+1:]...)
+	u.assFiles = append(u.assFiles[:id], u.assFiles[id+1:]...)
 	u.assSel = -1
 	u.assList.UnselectAll()
 	u.assList.Refresh()
+}
+
+// deleteLibAt removes the library folder at id (used by the row right-click menu).
+func (u *ui) deleteLibAt(id widget.ListItemID) {
+	if id < 0 || int(id) >= len(u.libDirs) {
+		return
+	}
+	u.libDirs = append(u.libDirs[:id], u.libDirs[id+1:]...)
+	u.libSel = -1
+	u.libList.UnselectAll()
+	u.libList.Refresh()
+	u.persist()
 }
 
 func (u *ui) addAssFiles(paths []string) {
