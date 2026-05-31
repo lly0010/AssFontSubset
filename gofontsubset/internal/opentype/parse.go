@@ -1,9 +1,11 @@
-// Package opentype provides a small, dependency-free reader for the font
-// metadata needed by the subsetter: family / full / PostScript names, weight,
-// italic & bold flags, glyph count and whether the font uses CFF outlines.
+// Package opentype provides a small reader for the font metadata needed by the
+// subsetter: family / full / PostScript names, weight, italic & bold flags,
+// glyph count and whether the font uses CFF outlines.
 //
 // It understands single-face sfnt files (.ttf/.otf) and font collections
-// (.ttc/.otc), reading the name, OS/2, head and maxp tables directly.
+// (.ttc/.otc), reading the name, OS/2, head and maxp tables directly. Name
+// records are decoded per platform/encoding, including legacy Macintosh CJK
+// encodings (Shift-JIS, Big5, EUC-KR, GBK) so multi-language names aren't garbled.
 package opentype
 
 import (
@@ -11,6 +13,13 @@ import (
 	"errors"
 	"os"
 	"unicode/utf16"
+
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/encoding/korean"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/encoding/traditionalchinese"
 )
 
 // LangEnUS is the Windows language id for English (United States). It is used as
@@ -168,6 +177,7 @@ func parseName(data []byte, t tableRec, f *Face) {
 			break
 		}
 		platformID := binary.BigEndian.Uint16(data[r : r+2])
+		encodingID := binary.BigEndian.Uint16(data[r+2 : r+4])
 		langID := int(binary.BigEndian.Uint16(data[r+4 : r+6]))
 		nameID := binary.BigEndian.Uint16(data[r+6 : r+8])
 		length := uint32(binary.BigEndian.Uint16(data[r+8 : r+10]))
@@ -176,7 +186,7 @@ func parseName(data []byte, t tableRec, f *Face) {
 			continue
 		}
 		raw := data[strOff : strOff+length]
-		s := decodeName(platformID, raw)
+		s := decodeName(platformID, encodingID, raw)
 		if s == "" {
 			continue
 		}
@@ -209,9 +219,9 @@ func parseName(data []byte, t tableRec, f *Face) {
 	}
 }
 
-func decodeName(platformID uint16, raw []byte) string {
+func decodeName(platformID, encodingID uint16, raw []byte) string {
 	switch platformID {
-	case 3, 0: // Windows / Unicode: UTF-16BE
+	case 3, 0: // Windows / Unicode: UTF-16BE (always, regardless of encodingID)
 		if len(raw)%2 != 0 {
 			raw = raw[:len(raw)-1]
 		}
@@ -220,11 +230,41 @@ func decodeName(platformID uint16, raw []byte) string {
 			u16[i] = binary.BigEndian.Uint16(raw[i*2 : i*2+2])
 		}
 		return string(utf16.Decode(u16))
-	default: // Mac Roman (approximate as Latin-1)
-		runes := make([]rune, len(raw))
-		for i, b := range raw {
-			runes[i] = rune(b)
+	case 1: // Macintosh: encodingID selects a legacy codec
+		if enc := macEncoding(encodingID); enc != nil {
+			if out, err := enc.NewDecoder().Bytes(raw); err == nil {
+				return string(out)
+			}
 		}
-		return string(runes)
+		return decodeLatin1(raw)
+	default: // ISO / unknown: best-effort Latin-1
+		return decodeLatin1(raw)
 	}
+}
+
+// macEncoding maps a Macintosh name-record encoding id to a text codec. Only the
+// common scripts are handled; others fall back to Mac Roman.
+func macEncoding(encodingID uint16) encoding.Encoding {
+	switch encodingID {
+	case 0: // Roman
+		return charmap.Macintosh
+	case 1: // Japanese (MacJapanese ≈ Shift-JIS)
+		return japanese.ShiftJIS
+	case 2: // Traditional Chinese
+		return traditionalchinese.Big5
+	case 3: // Korean
+		return korean.EUCKR
+	case 25: // Simplified Chinese
+		return simplifiedchinese.GBK
+	default:
+		return charmap.Macintosh
+	}
+}
+
+func decodeLatin1(raw []byte) string {
+	runes := make([]rune, len(raw))
+	for i, b := range raw {
+		runes[i] = rune(b)
+	}
+	return string(runes)
 }
