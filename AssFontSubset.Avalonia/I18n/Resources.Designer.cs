@@ -184,5 +184,125 @@ namespace AssFontSubset.Avalonia.I18n {
                 return ResourceManager.GetString("SuccessSubset", resourceCulture);
             }
         }
+
+        public static string FontLibrary {
+            get {
+                return ResourceManager.GetString("FontLibrary", resourceCulture);
+            }
+        }
+
+        public static string ConvertOtfToTtf {
+            get {
+                return ResourceManager.GetString("ConvertOtfToTtf", resourceCulture);
+            }
+        }
+
+        public static string ConvertOtfToTtfTip {
+            get {
+                return ResourceManager.GetString("ConvertOtfToTtfTip", resourceCulture);
+            }
+        }
+
+        public static string UseDatabaseOption {
+            get {
+                return ResourceManager.GetString("UseDatabaseOption", resourceCulture);
+            }
+        }
+
+        public static string UseDatabaseOptionTip {
+            get {
+                return ResourceManager.GetString("UseDatabaseOptionTip", resourceCulture);
+            }
+        }
+
+        public static string AddFiles {
+            get {
+                return ResourceManager.GetString("AddFiles", resourceCulture);
+            }
+        }
+
+        public static string Browse {
+            get {
+                return ResourceManager.GetString("Browse", resourceCulture);
+            }
+        }
+
+        public static string LibraryFolders {
+            get {
+                return ResourceManager.GetString("LibraryFolders", resourceCulture);
+            }
+        }
+
+        public static string AddFolder {
+            get {
+                return ResourceManager.GetString("AddFolder", resourceCulture);
+            }
+        }
+
+        public static string Remove {
+            get {
+                return ResourceManager.GetString("Remove", resourceCulture);
+            }
+        }
+
+        public static string BuildDatabase {
+            get {
+                return ResourceManager.GetString("BuildDatabase", resourceCulture);
+            }
+        }
+
+        public static string DatabasePathLabel {
+            get {
+                return ResourceManager.GetString("DatabasePathLabel", resourceCulture);
+            }
+        }
+
+        public static string IndexedFonts {
+            get {
+                return ResourceManager.GetString("IndexedFonts", resourceCulture);
+            }
+        }
+
+        public static string LogLabel {
+            get {
+                return ResourceManager.GetString("LogLabel", resourceCulture);
+            }
+        }
+
+        public static string ClearLog {
+            get {
+                return ResourceManager.GetString("ClearLog", resourceCulture);
+            }
+        }
+
+        public static string PythonPathLabel {
+            get {
+                return ResourceManager.GetString("PythonPathLabel", resourceCulture);
+            }
+        }
+
+        public static string ErrorNoFontFolder {
+            get {
+                return ResourceManager.GetString("ErrorNoFontFolder", resourceCulture);
+            }
+        }
+
+        public static string ErrorNoLibrary {
+            get {
+                return ResourceManager.GetString("ErrorNoLibrary", resourceCulture);
+            }
+        }
+
+        public static string ErrorEmptyDatabase {
+            get {
+                return ResourceManager.GetString("ErrorEmptyDatabase", resourceCulture);
+            }
+        }
+
+        public static string DatabaseBuilt {
+            get {
+                return ResourceManager.GetString("DatabaseBuilt", resourceCulture);
+            }
+        }
     }
 }

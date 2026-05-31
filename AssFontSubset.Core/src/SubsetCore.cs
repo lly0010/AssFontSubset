@@ -12,12 +12,45 @@ public class SubsetCore(ILogger? logger = null)
 {
     private static readonly Stopwatch _stopwatch = new();
 
+    /// <summary>
+    /// Subset using fonts gathered from a single fonts folder.
+    /// </summary>
     public async Task SubsetAsync(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, DirectoryInfo? binPath, SubsetConfig subsetConfig)
     {
         var baseDir = path[0].Directory!.FullName;
         fontPath ??= new DirectoryInfo(Path.Combine(baseDir, "fonts"));
         outputPath ??= new DirectoryInfo(Path.Combine(baseDir, "output"));
 
+        ValidateInputs(path);
+        if (!fontPath.Exists) { throw new Exception($"Please check if directory {fontPath} exists"); }
+        if (outputPath.Exists) { outputPath.Delete(true); }
+        var fontDir = fontPath.FullName;
+        var optDir = outputPath.FullName;
+
+        await Task.Run(() => RunPipeline(_ => GetFontInfoFromFiles(fontDir), path, optDir, binPath, subsetConfig));
+    }
+
+    /// <summary>
+    /// Subset using a pre-built font database, so font files don't have to be gathered
+    /// for every job. Only the fonts referenced by the ass files are used.
+    /// </summary>
+    public async Task SubsetWithDatabaseAsync(FileInfo[] path, FontDatabase database, DirectoryInfo? outputPath, DirectoryInfo? binPath, SubsetConfig subsetConfig)
+    {
+        var baseDir = path[0].Directory!.FullName;
+        outputPath ??= new DirectoryInfo(Path.Combine(baseDir, "output"));
+
+        ValidateInputs(path);
+        if (database.Count == 0) { throw new Exception("Font database is empty. Please build the database first."); }
+        if (outputPath.Exists) { outputPath.Delete(true); }
+        var optDir = outputPath.FullName;
+
+        await Task.Run(() => RunPipeline(
+            assFonts => ResolveFontInfosFromDatabase(database, assFonts),
+            path, optDir, binPath, subsetConfig));
+    }
+
+    private static void ValidateInputs(FileInfo[] path)
+    {
         foreach (var file in path)
         {
             if (!file.Exists)
@@ -25,18 +58,19 @@ public class SubsetCore(ILogger? logger = null)
                 throw new Exception($"Please check if file {file} exists");
             }
         }
-        if (!fontPath.Exists) { throw new Exception($"Please check if directory {fontPath} exists"); }
-        if (outputPath.Exists) { outputPath.Delete(true); }
-        var fontDir = fontPath.FullName;
-        var optDir = outputPath.FullName;
+    }
 
-        await Task.Run(() =>
+    private void RunPipeline(
+        Func<Dictionary<AssFontInfo, HashSet<Rune>>, IEnumerable<IGrouping<string, FontInfo>>> fontProvider,
+        FileInfo[] path, string optDir, DirectoryInfo? binPath, SubsetConfig subsetConfig)
+    {
+        var assFonts = GetAssFontInfoFromFiles(path, optDir, out var assMulti);
+        var fontInfos = fontProvider(assFonts);
+        var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap, subsetConfig, optDir);
+        Dictionary<string, string> nameMap = [];
+
+        try
         {
-            var fontInfos = GetFontInfoFromFiles(fontDir);
-            var assFonts = GetAssFontInfoFromFiles(path, optDir, out var assMulti);
-            var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
-            Dictionary<string, string> nameMap = [];
-
             switch (subsetConfig.Backend)
             {
                 case SubsetBackend.PyFontTools:
@@ -58,7 +92,35 @@ public class SubsetCore(ILogger? logger = null)
                 ChangeAssFontName(kv.Value, nameMap, fontMap);
                 kv.Value.WriteAssFile(kv.Key);
             }
-        });
+        }
+        finally
+        {
+            CleanupOtfWorkDir(optDir, subsetConfig);
+        }
+    }
+
+    private IEnumerable<IGrouping<string, FontInfo>> ResolveFontInfosFromDatabase(FontDatabase database, Dictionary<AssFontInfo, HashSet<Rune>> assFonts)
+    {
+        logger?.ZLogInformation($"Resolving fonts from database ({database.Count} indexed faces)");
+        var selected = database.SelectForNames(assFonts.Keys.Select(afi => afi.Name));
+        if (TryCheckDuplicatFonts(selected, out var fontInfoGroup))
+        {
+            throw new Exception("Maybe have duplicate fonts in font database");
+        }
+        return fontInfoGroup;
+    }
+
+    private static string GetOtfWorkDir(string optDir) => Path.Combine(optDir, "_otf2ttf_");
+
+    private void CleanupOtfWorkDir(string optDir, SubsetConfig config)
+    {
+        if (config.DebugMode) { return; }
+        var workDir = GetOtfWorkDir(optDir);
+        if (Directory.Exists(workDir))
+        {
+            try { Directory.Delete(workDir, true); }
+            catch (Exception ex) { logger?.ZLogWarning($"Failed to clean OTF→TTF temp dir: {ex.Message}"); }
+        }
     }
 
     private IEnumerable<IGrouping<string, FontInfo>> GetFontInfoFromFiles(string dir)
@@ -144,7 +206,7 @@ public class SubsetCore(ILogger? logger = null)
         return multiAssFonts;
     }
 
-    Dictionary<string, List<SubsetFont>> GetSubsetFonts(IEnumerable<IGrouping<string, FontInfo>> fontInfos, Dictionary<AssFontInfo, HashSet<Rune>> assFonts, out Dictionary<FontInfo, List<AssFontInfo>> fontMap)
+    Dictionary<string, List<SubsetFont>> GetSubsetFonts(IEnumerable<IGrouping<string, FontInfo>> fontInfos, Dictionary<AssFontInfo, HashSet<Rune>> assFonts, out Dictionary<FontInfo, List<AssFontInfo>> fontMap, SubsetConfig config, string optDir)
     {
         logger?.ZLogInformation($"Start generate subset font info");
         _stopwatch.Start();
@@ -182,6 +244,7 @@ public class SubsetCore(ILogger? logger = null)
 
         logger?.ZLogDebug($"Start convert font file info to subset font info");
         Dictionary<string, List<SubsetFont>> subsetFonts = [];
+        Dictionary<string, string> otfConvertCache = [];
         foreach (var kv in fontMap)
         {
             HashSet<Rune> horRunes = [];
@@ -198,12 +261,14 @@ public class SubsetCore(ILogger? logger = null)
                 }
             }
 
+            var fontFile = ResolveFontFile(kv.Key, config, optDir, otfConvertCache);
+
             var familyName = kv.Key.FamilyNames[FontConstant.LanguageIdEnUs];
             if (!subsetFonts.TryGetValue(familyName, out var _))
             {
                 subsetFonts.Add(familyName, []);
             }
-            subsetFonts[familyName].Add(new SubsetFont(new FileInfo(kv.Key.FileName), kv.Key.Index, horRunes, vertRunes));
+            subsetFonts[familyName].Add(new SubsetFont(fontFile, kv.Key.Index, horRunes, vertRunes));
         }
         logger?.ZLogDebug($"Convert completed");
 
@@ -211,6 +276,21 @@ public class SubsetCore(ILogger? logger = null)
         logger?.ZLogInformation($"Generate completed, use {_stopwatch.ElapsedMilliseconds} ms");
         _stopwatch.Reset();
         return subsetFonts;
+    }
+
+    private FileInfo ResolveFontFile(FontInfo fontInfo, SubsetConfig config, string optDir, Dictionary<string, string> cache)
+    {
+        if (!config.ConvertOtfToTtf || !OtfToTtfConverter.IsCffFont(fontInfo.FileName))
+        {
+            return new FileInfo(fontInfo.FileName);
+        }
+
+        if (!cache.TryGetValue(fontInfo.FileName, out var converted))
+        {
+            converted = OtfToTtfConverter.Convert(fontInfo.FileName, GetOtfWorkDir(optDir), config.PythonPath, logger);
+            cache[fontInfo.FileName] = converted;
+        }
+        return new FileInfo(converted);
     }
 
     static void ChangeAssFontName(AssData ass, Dictionary<string, string> nameMap, Dictionary<FontInfo, List<AssFontInfo>> fontMap)

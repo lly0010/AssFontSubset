@@ -30,7 +30,25 @@ Options:
 
 ## AssFontSubset.Avalonia
 
-大致可以参考 [v1 README](./README_v1.md) 中的 gui 使用方法，目前不支持显示实时的子集化进度和 harfbuzz-subset 后端。
+为 Windows 设计的图形界面，包含两个标签页：
+
+### 子集化（Subset）
+
+- **批量子集化**：可拖拽或通过「添加文件」选择多个同目录的 ASS 文件一次性处理。
+- **设置输出位置**：通过「浏览…」或直接编辑文本框指定 output 目录。
+- **字体来源**：
+  - 默认从单个「字体目录」查找字体；
+  - 勾选「使用字体数据库」后，改为从已建立索引的字体库中自动查找所需字体，无需每次手动收集字体文件。
+- **OTF 转 TTF**：勾选后会在子集化前先将 PostScript/CFF 轮廓字体（.otf）转换为 TrueType（.ttf）再进行子集化。该功能依赖带 [fontTools](https://github.com/fonttools/fonttools) 的 Python（可在「Python 路径」中指定 python 可执行文件，留空则使用 PATH 中的 `python`）。
+- 其余选项（居中思源省略号、HarfBuzz-Subset 后端、调试）与命令行一致，运行日志会显示在下方的日志面板中。
+
+### 字体库（Font Library）
+
+- **添加字体库**：通过「添加目录」加入一个或多个字体库文件夹（会递归扫描其中的 ttf/otf/ttc/otc）。
+- **建立数据库**：点击「建立数据库」按钮后，会扫描所有字体库目录并将每个字体的信息（families / fullnames / psnames / weight / slant / path / index / last_write_time 等）写入数据库文件（默认位于 `%APPDATA%\AssFontSubset\fontdb.json`，可通过「数据库文件」更改）。
+- 建立完成后可在「已索引字体」列表中查看索引结果；之后在子集化标签页勾选「使用字体数据库」即可直接使用，无需每次寻找字体。
+
+字体库目录、数据库路径与各选项会自动保存到 `%APPDATA%\AssFontSubset\settings.json`，下次启动时恢复。
 
 ## 注意
 

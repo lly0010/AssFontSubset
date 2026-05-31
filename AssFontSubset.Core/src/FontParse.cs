@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Mobsub.Font;
+using ZLogger;
 
 namespace AssFontSubset.Core;
 
@@ -62,6 +64,108 @@ public static class FontParse
         }
 
         return fontInfos;
+    }
+
+    /// <summary>
+    /// Build font database entries from the given font files. Faulty files are skipped
+    /// with a warning instead of aborting the whole index.
+    /// </summary>
+    public static List<FontDatabaseEntry> BuildDatabaseEntries(IEnumerable<FileInfo> files, ILogger? logger = null)
+    {
+        var entries = new List<FontDatabaseEntry>();
+        var fileArray = files as FileInfo[] ?? files.ToArray();
+        if (fileArray.Length == 0)
+        {
+            return entries;
+        }
+
+        IEnumerable<FontFaceInfoBase> faceInfos;
+        try
+        {
+            faceInfos = OpenType.GetLocalFontsInfo(fileArray);
+        }
+        catch (Exception ex)
+        {
+            logger?.ZLogError($"Failed to read fonts: {ex.Message}");
+            return entries;
+        }
+
+        foreach (var faceInfo in faceInfos)
+        {
+            try
+            {
+                entries.Add(ConvertToDatabaseEntry((FontFaceInfoOpenType)faceInfo));
+            }
+            catch (Exception ex)
+            {
+                logger?.ZLogWarning($"Skip font face ({faceInfo.FileInfo?.FilePath}): {ex.Message}");
+            }
+        }
+
+        return entries;
+    }
+
+    private static FontDatabaseEntry ConvertToDatabaseEntry(FontFaceInfoOpenType info)
+    {
+        var familyNames = info.FamilyNamesGdi?.Count > 0
+            ? new Dictionary<int, string>(info.FamilyNamesGdi)
+            : info.FamilyNames?.Count > 0
+                ? new Dictionary<int, string>(info.FamilyNames)
+                : [];
+
+        if (familyNames.Count == 0)
+        {
+            throw new InvalidDataException("No family names found");
+        }
+
+        if (!familyNames.ContainsKey(FontConstant.LanguageIdEnUs))
+        {
+            familyNames.Add(FontConstant.LanguageIdEnUs, familyNames.FirstOrDefault().Value);
+        }
+
+        var families = new List<string>();
+        void AddDistinct(List<string> target, IEnumerable<string>? names)
+        {
+            if (names is null) return;
+            foreach (var name in names)
+            {
+                if (!string.IsNullOrWhiteSpace(name) && !target.Contains(name))
+                {
+                    target.Add(name);
+                }
+            }
+        }
+
+        AddDistinct(families, familyNames.Values);
+        AddDistinct(families, info.FamilyNames?.Values);
+
+        var fullNames = new List<string>();
+        AddDistinct(fullNames, info.FullNames?.Values);
+
+        var psNames = new List<string>();
+        if (!string.IsNullOrWhiteSpace(info.PostScriptName))
+        {
+            psNames.Add(info.PostScriptName);
+        }
+
+        var fsSel = info.fsSelection;
+        var path = info.FileInfo!.FilePath!;
+        var lastWrite = "UTC " + File.GetLastWriteTimeUtc(path).ToString("yyyy-MM-dd HH:mm:ss");
+
+        return new FontDatabaseEntry
+        {
+            Families = families,
+            FullNames = fullNames,
+            PsNames = psNames,
+            Weight = info.Weight,
+            Slant = (fsSel & 0b_1) == 1 ? 1 : 0,
+            Bold = ((fsSel & 0b_0010_0000) >> 5) == 1,
+            Path = path,
+            Index = (int)info.FaceIndex,
+            MaxpNumGlyphs = info.MaxpNumGlyphs,
+            FamilyNamesByLang = familyNames,
+            LastWriteTime = lastWrite,
+        };
     }
 
     private static FontInfo ConvertToFontInfo(FontFaceInfoBase faceInfo)

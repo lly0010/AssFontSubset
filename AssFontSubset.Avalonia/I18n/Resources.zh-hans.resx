@@ -50,4 +50,64 @@
     <data name="BackendHarfbuzzSubsetTip" xml:space="preserve">
         <value>使用 Harfbuzz-Subset 子集化字体。</value>
     </data>
+    <data name="FontLibrary" xml:space="preserve">
+        <value>字体库</value>
+    </data>
+    <data name="ConvertOtfToTtf" xml:space="preserve">
+        <value>OTF 转 TTF</value>
+    </data>
+    <data name="ConvertOtfToTtfTip" xml:space="preserve">
+        <value>子集化前先将 PostScript/CFF 轮廓字体（.otf）转换为 TrueType（.ttf）。需要安装带 fontTools 的 Python。</value>
+    </data>
+    <data name="UseDatabaseOption" xml:space="preserve">
+        <value>使用字体数据库</value>
+    </data>
+    <data name="UseDatabaseOptionTip" xml:space="preserve">
+        <value>从已建立索引的字体库中查找字体，而不是使用单个字体目录。</value>
+    </data>
+    <data name="AddFiles" xml:space="preserve">
+        <value>添加文件</value>
+    </data>
+    <data name="Browse" xml:space="preserve">
+        <value>浏览…</value>
+    </data>
+    <data name="LibraryFolders" xml:space="preserve">
+        <value>字体库目录</value>
+    </data>
+    <data name="AddFolder" xml:space="preserve">
+        <value>添加目录</value>
+    </data>
+    <data name="Remove" xml:space="preserve">
+        <value>移除</value>
+    </data>
+    <data name="BuildDatabase" xml:space="preserve">
+        <value>建立数据库</value>
+    </data>
+    <data name="DatabasePathLabel" xml:space="preserve">
+        <value>数据库文件</value>
+    </data>
+    <data name="IndexedFonts" xml:space="preserve">
+        <value>已索引字体</value>
+    </data>
+    <data name="LogLabel" xml:space="preserve">
+        <value>日志</value>
+    </data>
+    <data name="ClearLog" xml:space="preserve">
+        <value>清空日志</value>
+    </data>
+    <data name="PythonPathLabel" xml:space="preserve">
+        <value>Python 路径（可选）</value>
+    </data>
+    <data name="ErrorNoFontFolder" xml:space="preserve">
+        <value>未设置字体目录，请选择字体目录或启用字体数据库。</value>
+    </data>
+    <data name="ErrorNoLibrary" xml:space="preserve">
+        <value>未添加字体库目录，请先至少添加一个目录。</value>
+    </data>
+    <data name="ErrorEmptyDatabase" xml:space="preserve">
+        <value>字体数据库为空，请先建立数据库。</value>
+    </data>
+    <data name="DatabaseBuilt" xml:space="preserve">
+        <value>数据库已建立：共索引 {0} 个字体。</value>
+    </data>
 </root>

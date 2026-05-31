@@ -60,4 +60,64 @@
     <data name="BackendHarfbuzzSubsetTip" xml:space="preserve">
         <value>Use Harfbuzz-Subset subset fonts.</value>
     </data>
+    <data name="FontLibrary" xml:space="preserve">
+        <value>Font Library</value>
+    </data>
+    <data name="ConvertOtfToTtf" xml:space="preserve">
+        <value>OTF to TTF</value>
+    </data>
+    <data name="ConvertOtfToTtfTip" xml:space="preserve">
+        <value>Convert fonts with PostScript/CFF outlines (.otf) to TrueType (.ttf) before subsetting. Requires Python with fontTools.</value>
+    </data>
+    <data name="UseDatabaseOption" xml:space="preserve">
+        <value>Use font database</value>
+    </data>
+    <data name="UseDatabaseOptionTip" xml:space="preserve">
+        <value>Find fonts from the indexed font library instead of a single fonts folder.</value>
+    </data>
+    <data name="AddFiles" xml:space="preserve">
+        <value>Add Files</value>
+    </data>
+    <data name="Browse" xml:space="preserve">
+        <value>Browse…</value>
+    </data>
+    <data name="LibraryFolders" xml:space="preserve">
+        <value>Library Folders</value>
+    </data>
+    <data name="AddFolder" xml:space="preserve">
+        <value>Add Folder</value>
+    </data>
+    <data name="Remove" xml:space="preserve">
+        <value>Remove</value>
+    </data>
+    <data name="BuildDatabase" xml:space="preserve">
+        <value>Build Database</value>
+    </data>
+    <data name="DatabasePathLabel" xml:space="preserve">
+        <value>Database File</value>
+    </data>
+    <data name="IndexedFonts" xml:space="preserve">
+        <value>Indexed Fonts</value>
+    </data>
+    <data name="LogLabel" xml:space="preserve">
+        <value>Log</value>
+    </data>
+    <data name="ClearLog" xml:space="preserve">
+        <value>Clear Log</value>
+    </data>
+    <data name="PythonPathLabel" xml:space="preserve">
+        <value>Python Path (optional)</value>
+    </data>
+    <data name="ErrorNoFontFolder" xml:space="preserve">
+        <value>No font folder set. Please choose a fonts folder or enable the font database.</value>
+    </data>
+    <data name="ErrorNoLibrary" xml:space="preserve">
+        <value>No library folders added. Please add at least one folder first.</value>
+    </data>
+    <data name="ErrorEmptyDatabase" xml:space="preserve">
+        <value>Font database is empty. Please build the database first.</value>
+    </data>
+    <data name="DatabaseBuilt" xml:space="preserve">
+        <value>Database built: {0} font faces indexed.</value>
+    </data>
 </root>
