@@ -258,8 +258,10 @@ func (cfg Config) subsetOne(cand Candidate, runeSet map[rune]bool, vertical bool
 		ext = ".otf"
 	}
 
-	if cfg.ConvertOtf && cand.IsCFF {
-		ttf, err := convertOtfToTtf(cand.Path, workDir, cfg.Python, cfg.Log)
+	// Convert to a standalone .ttf when requested for CFF/OTF outlines or for any
+	// collection face (.ttc/.otc), flattening it into its own TrueType file.
+	if cfg.ConvertOtf && (cand.IsCFF || isCollectionFile(cand.Path)) {
+		ttf, err := convertToTtf(cand.Path, cand.Index, workDir, cfg.Python, cfg.Log)
 		if err != nil {
 			return err
 		}
@@ -366,6 +368,21 @@ func writeRunes(path string, set map[rune]bool) error {
 	}
 	sort.Slice(runes, func(i, j int) bool { return runes[i] < runes[j] })
 	return os.WriteFile(path, []byte(string(runes)), 0o644)
+}
+
+// isCollectionFile reports whether path is a TrueType/OpenType collection
+// (.ttc/.otc), detected by the "ttcf" magic at the start of the file.
+func isCollectionFile(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	var magic [4]byte
+	if _, err := f.Read(magic[:]); err != nil {
+		return false
+	}
+	return string(magic[:]) == "ttcf"
 }
 
 func isFontFile(name string) bool {

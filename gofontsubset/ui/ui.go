@@ -120,7 +120,7 @@ func (u *ui) buildSubsetTab() fyne.CanvasObject {
 	})
 	u.useDB.SetChecked(u.settings.UseDatabase)
 
-	u.convertOtf = widget.NewCheck("OTF 转 TTF (需 Python+fontTools)", nil)
+	u.convertOtf = widget.NewCheck("OTF/TTC 转 TTF (需 Python+fontTools)", nil)
 	u.convertOtf.SetChecked(u.settings.ConvertOtf)
 	u.debug = widget.NewCheck("调试 Debug (保留临时文件)", nil)
 	u.debug.SetChecked(u.settings.Debug)

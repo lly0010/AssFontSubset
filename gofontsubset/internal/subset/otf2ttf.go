@@ -9,7 +9,11 @@ import (
 	"strings"
 )
 
-// otf2ttfScript is the standard fontTools (cu2qu) OTF->TTF conversion recipe.
+// otf2ttfScript converts a single font face to a standalone TrueType (.ttf)
+// file using fontTools. It accepts a font number (argv[3]) so a face can be
+// pulled out of a collection (.ttc/.otc). CFF/OpenType outlines are converted
+// to quadratic glyf via cu2qu; TrueType faces are simply re-saved as a clean,
+// single-face .ttf (which is exactly what flattening a collection requires).
 const otf2ttfScript = `import sys
 from fontTools.ttLib import TTFont, newTable
 from fontTools.pens.cu2quPen import Cu2QuPen
@@ -75,14 +79,19 @@ def otf_to_ttf(font, post_format, max_err, reverse_direction):
     font.sfntVersion = "\000\001\000\000"
 
 
-font = TTFont(sys.argv[1])
-otf_to_ttf(font, POST_FORMAT, MAX_ERR, REVERSE_DIRECTION)
+font_number = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+font = TTFont(sys.argv[1], fontNumber=font_number)
+if font.sfntVersion == "OTTO" and "CFF " in font:
+    otf_to_ttf(font, POST_FORMAT, MAX_ERR, REVERSE_DIRECTION)
+# Drop any collection/woff wrapper so the result is a plain standalone .ttf.
+font.flavor = None
 font.save(sys.argv[2])
 `
 
-// convertOtfToTtf converts a CFF/OTF font to a TrueType (.ttf) copy inside
-// workDir using fontTools via Python, returning the produced .ttf path.
-func convertOtfToTtf(otfPath, workDir, python string, logf func(string)) (string, error) {
+// convertToTtf produces a standalone TrueType (.ttf) copy of a single font face
+// inside workDir, returning the produced .ttf path. faceIndex selects the face
+// when src is a collection (.ttc/.otc); it is ignored for single-face files.
+func convertToTtf(src string, faceIndex int, workDir, python string, logf func(string)) (string, error) {
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
 		return "", err
 	}
@@ -92,21 +101,23 @@ func convertOtfToTtf(otfPath, workDir, python string, logf func(string)) (string
 			return "", err
 		}
 	}
-	ttfPath := filepath.Join(workDir, strings.TrimSuffix(filepath.Base(otfPath), filepath.Ext(otfPath))+".ttf")
+	base := strings.TrimSuffix(filepath.Base(src), filepath.Ext(src))
+	// Include the face index so distinct faces of one collection don't collide.
+	ttfPath := filepath.Join(workDir, fmt.Sprintf("%s.%d.ttf", base, faceIndex))
 
 	py := resolvePython(python)
 	if logf != nil {
-		logf(fmt.Sprintf("convert OTF to TTF: %s (python: %s)", filepath.Base(otfPath), py))
+		logf(fmt.Sprintf("convert to TTF: %s (face %d, python: %s)", filepath.Base(src), faceIndex, py))
 	}
 
-	cmd := exec.Command(py, scriptPath, otfPath, ttfPath)
+	cmd := exec.Command(py, scriptPath, src, ttfPath, fmt.Sprintf("%d", faceIndex))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("OTF->TTF conversion failed for %s (need Python with fontTools): %v: %s",
-			filepath.Base(otfPath), err, strings.TrimSpace(string(out)))
+		return "", fmt.Errorf("TTF conversion failed for %s (need Python with fontTools): %v: %s",
+			filepath.Base(src), err, strings.TrimSpace(string(out)))
 	}
 	if _, err := os.Stat(ttfPath); err != nil {
-		return "", fmt.Errorf("OTF->TTF produced no output for %s", filepath.Base(otfPath))
+		return "", fmt.Errorf("TTF conversion produced no output for %s", filepath.Base(src))
 	}
 	return ttfPath, nil
 }

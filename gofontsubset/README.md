@@ -11,7 +11,7 @@
 - **批量子集化**：拖拽、「添加文件」或「添加目录」选入多个 ASS 文件一次处理。
 - **设置输出位置**：可指定输出目录（留空则用第一个字幕同目录的 `output`）。
 - **字体来源**：默认从单个「字体目录」查找；勾选「使用字体数据库」后改用已建立索引的字体库。
-- **OTF 转 TTF**：勾选后在子集化前把 `.otf`（CFF 轮廓）转换为 `.ttf`，依赖带 fontTools 的 Python。
+- **OTF/TTC 转 TTF**：勾选后在子集化前把 `.otf`（CFF 轮廓）转换为 `.ttf`，并把字体集合（`.ttc`/`.otc`）按所用的那一个字面拆分、扁平化为独立的 `.ttf`，依赖带 fontTools 的 Python。
 - 运行日志实时显示。
 
 ### 字体库（Font Library）
@@ -43,7 +43,7 @@
 ## 运行期依赖
 
 - **hb-subset**：HarfBuzz 自带的子集化工具。请将 `hb-subset(.exe)` 放进 PATH，或在界面中指定其路径。
-- **Python + fontTools**（仅当勾选「OTF 转 TTF」时）：用于 CFF→TrueType 轮廓转换。
+- **Python + fontTools**（仅当勾选「OTF/TTC 转 TTF」时）：用于 CFF→TrueType 轮廓转换，以及把 `.ttc`/`.otc` 集合拆分为独立 `.ttf`。
 
 > 说明：hb-subset 自身不能重命名字体，本程序在子集化后用纯 Go 重写 `name` 表，
 > 为每个字族生成唯一的随机名，并重算表目录与校验和。
