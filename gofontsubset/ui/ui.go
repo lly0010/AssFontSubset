@@ -11,7 +11,6 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/lly0010/AssFontSubset/gofontsubset/internal/config"
@@ -61,6 +60,7 @@ func Run() {
 	u.db = db
 
 	u.app = app.New()
+	applyCJKTheme(u.app)
 	u.win = u.app.NewWindow("gofontsubset")
 	u.win.Resize(fyne.NewSize(960, 720))
 
@@ -96,12 +96,13 @@ func (u *ui) buildSubsetTab() fyne.CanvasObject {
 
 	addBtn := widget.NewButton("添加文件 Add Files", u.openAssFiles)
 	addDirBtn := widget.NewButton("添加目录 Add Folder", u.openAssFolder)
+	removeBtn := widget.NewButton("移除选中 Remove", u.removeSelectedAss)
 	clearBtn := widget.NewButton("清空 Clear", func() {
 		u.assFiles = nil
 		u.assSel = -1
 		u.assList.Refresh()
 	})
-	assButtons := container.NewHBox(addBtn, addDirBtn, clearBtn)
+	assButtons := container.NewHBox(addBtn, addDirBtn, removeBtn, clearBtn)
 
 	u.output = widget.NewEntry()
 	u.output.SetText(u.settings.OutputFolder)
@@ -176,14 +177,7 @@ func (u *ui) buildLibraryTab() fyne.CanvasObject {
 	)
 	u.libList.OnSelected = func(id widget.ListItemID) { u.libSel = id }
 
-	addBtn := widget.NewButton("添加目录 Add Folder", func() {
-		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
-			if err != nil || uri == nil {
-				return
-			}
-			u.addLibDir(uri.Path())
-		}, u.win)
-	})
+	addBtn := widget.NewButton("添加目录 Add Folder", u.pickLibFolder)
 	removeBtn := widget.NewButton("移除 Remove", func() {
 		if u.libSel >= 0 && u.libSel < len(u.libDirs) {
 			u.libDirs = append(u.libDirs[:u.libSel], u.libDirs[u.libSel+1:]...)
@@ -195,16 +189,7 @@ func (u *ui) buildLibraryTab() fyne.CanvasObject {
 
 	u.dbPath = widget.NewEntry()
 	u.dbPath.SetText(u.settings.DatabasePath)
-	dbBrowse := widget.NewButton("浏览…", func() {
-		dialog.ShowFileSave(func(w fyne.URIWriteCloser, err error) {
-			if err != nil || w == nil {
-				return
-			}
-			path := w.URI().Path()
-			_ = w.Close()
-			u.dbPath.SetText(path)
-		}, u.win)
-	})
+	dbBrowse := widget.NewButton("浏览…", u.pickDbPath)
 
 	buildBtn := widget.NewButton("建立数据库 Build Database", u.buildDatabase)
 	buildBtn.Importance = widget.HighImportance
@@ -339,34 +324,15 @@ func (u *ui) buildDatabase() {
 
 // -------------------------------------------------------------------- helpers
 
-func (u *ui) openAssFiles() {
-	d := dialog.NewFileOpen(func(rc fyne.URIReadCloser, err error) {
-		if err != nil || rc == nil {
-			return
-		}
-		path := rc.URI().Path()
-		_ = rc.Close()
-		u.addAssFiles([]string{path})
-	}, u.win)
-	d.SetFilter(storage.NewExtensionFileFilter([]string{".ass"}))
-	d.Show()
-}
-
-func (u *ui) openAssFolder() {
-	dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
-		if err != nil || uri == nil {
-			return
-		}
-		list, err := uri.List()
-		if err != nil {
-			return
-		}
-		var paths []string
-		for _, child := range list {
-			paths = append(paths, child.Path())
-		}
-		u.addAssFiles(paths)
-	}, u.win)
+// removeSelectedAss removes the currently selected subtitle from the list.
+func (u *ui) removeSelectedAss() {
+	if u.assSel < 0 || u.assSel >= len(u.assFiles) {
+		return
+	}
+	u.assFiles = append(u.assFiles[:u.assSel], u.assFiles[u.assSel+1:]...)
+	u.assSel = -1
+	u.assList.UnselectAll()
+	u.assList.Refresh()
 }
 
 func (u *ui) addAssFiles(paths []string) {
@@ -402,15 +368,6 @@ func (u *ui) addLibDir(path string) {
 	u.libDirs = append(u.libDirs, path)
 	u.libList.Refresh()
 	u.persist()
-}
-
-func (u *ui) pickFolder(target *widget.Entry) {
-	dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
-		if err != nil || uri == nil {
-			return
-		}
-		target.SetText(uri.Path())
-	}, u.win)
 }
 
 func (u *ui) setBusy(busy bool) {
