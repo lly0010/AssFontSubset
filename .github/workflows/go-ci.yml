@@ -1,0 +1,76 @@
+name: Build gofontsubset
+
+on:
+  push:
+    paths:
+      - 'gofontsubset/**'
+      - '.github/workflows/go-ci.yml'
+  pull_request:
+    paths:
+      - 'gofontsubset/**'
+      - '.github/workflows/go-ci.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: gofontsubset
+
+jobs:
+  test:
+    name: test-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install Fyne build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Go version
+        run: go version
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build (verify GUI compiles)
+        run: go build ./...
+
+  build-windows:
+    name: build-windows-${{ matrix.arch }}
+    needs: test
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+    env:
+      CGO_ENABLED: 1
+      GOARCH: ${{ matrix.arch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build
+        run: go build -ldflags "-H windowsgui" -o gofontsubset.exe .
+
+      - name: Set short version
+        shell: bash
+        run: echo "VERSION=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      - name: Upload exe
+        uses: actions/upload-artifact@v7
+        with:
+          name: gofontsubset_g${{ env.VERSION }}_windows-${{ matrix.arch }}
+          path: gofontsubset/gofontsubset.exe
