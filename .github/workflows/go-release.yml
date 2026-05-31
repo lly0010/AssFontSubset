@@ -2,12 +2,18 @@ name: Release gofontsubset
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - claude/great-knuth-CM099
+    paths:
+      - 'gofontsubset/**'
+      - '.github/workflows/go-release.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+env:
+  RELEASE_TAG: v0.1.0
 
 defaults:
   run:
@@ -41,20 +47,25 @@ jobs:
           mkdir -p dist
           cp gofontsubset.exe README.md "dist/"
           cd dist
-          7z a "gofontsubset_${GITHUB_REF_NAME}_windows-${{ matrix.arch }}.zip" gofontsubset.exe README.md
+          7z a "gofontsubset_${RELEASE_TAG}_windows-${{ matrix.arch }}.zip" gofontsubset.exe README.md
 
       - name: Upload exe as build artifact
         uses: actions/upload-artifact@v7
         with:
-          name: gofontsubset_${{ github.ref_name }}_windows-${{ matrix.arch }}
+          name: gofontsubset_${{ env.RELEASE_TAG }}_windows-${{ matrix.arch }}
           path: gofontsubset/gofontsubset.exe
 
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: gofontsubset ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
           prerelease: true
-          generate_release_notes: true
+          body: |
+            Prerelease build of the Go (Fyne) gofontsubset GUI from branch `claude/great-knuth-CM099` (PR #1).
+
+            **Asset:** `gofontsubset.exe` — Windows ${{ matrix.arch }} GUI. Requires `hb-subset` available on PATH for subsetting.
           files: |
             gofontsubset/gofontsubset.exe
-            gofontsubset/dist/gofontsubset_${{ github.ref_name }}_windows-${{ matrix.arch }}.zip
+            gofontsubset/dist/gofontsubset_${{ env.RELEASE_TAG }}_windows-${{ matrix.arch }}.zip
