@@ -1,0 +1,60 @@
+name: Release gofontsubset
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: gofontsubset
+
+jobs:
+  release-windows:
+    name: release-windows-${{ matrix.arch }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+    env:
+      CGO_ENABLED: 1
+      GOARCH: ${{ matrix.arch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build GUI
+        run: go build -ldflags "-H windowsgui" -o gofontsubset.exe .
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp gofontsubset.exe README.md "dist/"
+          cd dist
+          7z a "gofontsubset_${GITHUB_REF_NAME}_windows-${{ matrix.arch }}.zip" gofontsubset.exe README.md
+
+      - name: Upload exe as build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: gofontsubset_${{ github.ref_name }}_windows-${{ matrix.arch }}
+          path: gofontsubset/gofontsubset.exe
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            gofontsubset/gofontsubset.exe
+            gofontsubset/dist/gofontsubset_${{ github.ref_name }}_windows-${{ matrix.arch }}.zip
