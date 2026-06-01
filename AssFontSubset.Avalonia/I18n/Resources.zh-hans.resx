@@ -83,4 +83,22 @@
     <data name="SeparateFontFolderTip" xml:space="preserve">
         <value>将子集化字体放入与 ASS 文件同名的子文件夹中（output/&lt;ass 文件名&gt;/...）。</value>
     </data>
+    <data name="AddFolder" xml:space="preserve">
+        <value>添加文件夹</value>
+    </data>
+    <data name="RemoveSelected" xml:space="preserve">
+        <value>删除所选</value>
+    </data>
+    <data name="StatusReady" xml:space="preserve">
+        <value>就绪</value>
+    </data>
+    <data name="StatusRunning" xml:space="preserve">
+        <value>正在子集化……</value>
+    </data>
+    <data name="StatusDone" xml:space="preserve">
+        <value>已完成，请检查输出目录。</value>
+    </data>
+    <data name="StatusFailed" xml:space="preserve">
+        <value>子集化失败，请查看日志。</value>
+    </data>
 </root>

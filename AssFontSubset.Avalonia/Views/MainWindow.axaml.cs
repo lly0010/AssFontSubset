@@ -5,12 +5,14 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AssFontSubset.Avalonia.Models;
 using AssFontSubset.Avalonia.ViewModels;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
@@ -20,16 +22,61 @@ namespace AssFontSubset.Avalonia.Views
 {
     public partial class MainWindow : Window
     {
+        private readonly ObservableCollection<string> _assFiles = [];
         private bool _running;
 
         public MainWindow()
         {
             InitializeComponent();
             DataContext = new MainWindowViewModel();
-            AddHandler(DragDrop.DragOverEvent, DragOver_Files);
-            AddHandler(DragDrop.DropEvent, Drop_Files);
 
-            ConsoleExe.Text = DetectConsoleExe() ?? string.Empty;
+            AssFileList.ItemsSource = _assFiles;
+
+            // Drag & drop: ass files / folders onto the list; folders onto the path boxes.
+            AssFileList.AddHandler(DragDrop.DragOverEvent, DragOver_AcceptFiles);
+            AssFileList.AddHandler(DragDrop.DropEvent, Drop_AssFiles);
+            FontFolder.AddHandler(DragDrop.DragOverEvent, DragOver_AcceptFiles);
+            FontFolder.AddHandler(DragDrop.DropEvent, Drop_FontFolder);
+            OutputFolder.AddHandler(DragDrop.DragOverEvent, DragOver_AcceptFiles);
+            OutputFolder.AddHandler(DragDrop.DropEvent, Drop_OutputFolder);
+            AssFileList.KeyDown += AssFileList_KeyDown;
+
+            LoadSettings();
+            SetStatus(I18nResources.StatusReady);
+        }
+
+        // ---------- Settings persistence ----------
+
+        private void LoadSettings()
+        {
+            var settings = AppSettings.Load();
+            ConsoleExe.Text = !string.IsNullOrWhiteSpace(settings.ConsoleExePath)
+                ? settings.ConsoleExePath
+                : DetectConsoleExe() ?? string.Empty;
+            Backend.SelectedIndex = Math.Clamp(settings.BackendIndex, 0, 1);
+            SourceHanEllipsis.IsChecked = settings.SourceHanEllipsis;
+            Debug.IsChecked = settings.Debug;
+            EmbedFontToAss.IsChecked = settings.EmbedFontToAss;
+            SeparateFontFolder.IsChecked = settings.SeparateFontFolder;
+        }
+
+        private void SaveSettings()
+        {
+            new AppSettings
+            {
+                ConsoleExePath = ConsoleExe.Text,
+                BackendIndex = Backend.SelectedIndex,
+                SourceHanEllipsis = SourceHanEllipsis.IsChecked == true,
+                Debug = Debug.IsChecked == true,
+                EmbedFontToAss = EmbedFontToAss.IsChecked == true,
+                SeparateFontFolder = SeparateFontFolder.IsChecked == true,
+            }.Save();
+        }
+
+        protected override void OnClosing(WindowClosingEventArgs e)
+        {
+            SaveSettings();
+            base.OnClosing(e);
         }
 
         /// <summary>
@@ -42,9 +89,11 @@ namespace AssFontSubset.Avalonia.Views
             return File.Exists(candidate) ? candidate : null;
         }
 
+        // ---------- ASS file list management ----------
+
         private void Clear_Click(object? sender, RoutedEventArgs e)
         {
-            AssFileList.ItemsSource = null;
+            _assFiles.Clear();
             FontFolder.Text = string.Empty;
             OutputFolder.Text = string.Empty;
         }
@@ -58,31 +107,66 @@ namespace AssFontSubset.Avalonia.Views
                 FileTypeFilter = [new FilePickerFileType("ASS Subtitles") { Patterns = ["*.ass"] }],
             });
             if (files.Count == 0) return;
+            AddAssFiles(files.Select(f => f.Path.LocalPath));
+        }
 
-            var paths = files.Select(f => f.Path.LocalPath);
-            AddAssFiles(paths);
+        private async void AddFolder_Click(object? sender, RoutedEventArgs e)
+        {
+            var dir = await PickFolderAsync(I18nResources.AddFolder);
+            if (dir is not null) AddAssFromFolder(dir);
+        }
+
+        private void RemoveSelected_Click(object? sender, RoutedEventArgs e) => RemoveSelectedAss();
+
+        private void AssFileList_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete)
+            {
+                RemoveSelectedAss();
+                e.Handled = true;
+            }
+        }
+
+        private void RemoveSelectedAss()
+        {
+            var selected = AssFileList.SelectedItems?.Cast<string>().ToList();
+            if (selected is null) return;
+            foreach (var item in selected)
+            {
+                _assFiles.Remove(item);
+            }
+        }
+
+        private void AddAssFromFolder(string folder)
+        {
+            if (!Directory.Exists(folder)) return;
+            AddAssFiles(Directory.EnumerateFiles(folder, "*.ass", SearchOption.TopDirectoryOnly));
         }
 
         private void AddAssFiles(IEnumerable<string> paths)
         {
-            var current = (AssFileList.ItemsSource as IEnumerable<string>)?.ToList() ?? [];
+            // Merge, de-duplicate and keep sorted.
+            var merged = new SortedSet<string>(_assFiles, StringComparer.OrdinalIgnoreCase);
             foreach (var p in paths)
             {
-                if (string.Equals(Path.GetExtension(p), ".ass", StringComparison.OrdinalIgnoreCase) && !current.Contains(p))
+                if (string.Equals(Path.GetExtension(p), ".ass", StringComparison.OrdinalIgnoreCase))
                 {
-                    current.Add(p);
+                    merged.Add(p);
                 }
             }
-            if (current.Count == 0) return;
+            if (merged.Count == _assFiles.Count) return;
 
-            AssFileList.ItemsSource = current.OrderBy(x => x).ToList();
+            _assFiles.Clear();
+            foreach (var p in merged) _assFiles.Add(p);
 
             // Default the font/output folders based on the first ass file's directory.
-            var dir = Path.GetDirectoryName(current[0]);
+            var dir = Path.GetDirectoryName(_assFiles[0]);
             if (dir is null) return;
             if (string.IsNullOrEmpty(FontFolder.Text)) FontFolder.Text = Path.Combine(dir, "fonts");
             if (string.IsNullOrEmpty(OutputFolder.Text)) OutputFolder.Text = Path.Combine(dir, "output");
         }
+
+        // ---------- Browse buttons ----------
 
         private async void BrowseFontFolder_Click(object? sender, RoutedEventArgs e)
         {
@@ -116,12 +200,61 @@ namespace AssFontSubset.Avalonia.Views
             return dirs.Count > 0 ? dirs[0].Path.LocalPath : null;
         }
 
+        // ---------- Drag & drop ----------
+
+        private void DragOver_AcceptFiles(object? sender, DragEventArgs e)
+        {
+            var files = e.DataTransfer.TryGetFiles();
+            e.DragEffects = files is { Length: > 0 } ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void Drop_AssFiles(object? sender, DragEventArgs e)
+        {
+            var paths = GetDroppedPaths(e);
+            if (paths.Length == 0) return;
+
+            foreach (var folder in paths.Where(Directory.Exists))
+            {
+                AddAssFromFolder(folder);
+            }
+            AddAssFiles(paths.Where(p => !Directory.Exists(p)));
+            e.Handled = true;
+        }
+
+        private void Drop_FontFolder(object? sender, DragEventArgs e)
+        {
+            var dir = GetDroppedFolder(e);
+            if (dir is not null) FontFolder.Text = dir;
+            e.Handled = true;
+        }
+
+        private void Drop_OutputFolder(object? sender, DragEventArgs e)
+        {
+            var dir = GetDroppedFolder(e);
+            if (dir is not null) OutputFolder.Text = dir;
+            e.Handled = true;
+        }
+
+        private static string[] GetDroppedPaths(DragEventArgs e) =>
+            e.DataTransfer.TryGetFiles()?.Select(f => f.Path.LocalPath).ToArray() ?? [];
+
+        /// <summary>Resolve a dropped folder path: the folder itself, or the parent of a dropped file.</summary>
+        private static string? GetDroppedFolder(DragEventArgs e)
+        {
+            var paths = GetDroppedPaths(e);
+            if (paths.Length == 0) return null;
+            var first = paths[0];
+            return Directory.Exists(first) ? first : Path.GetDirectoryName(first);
+        }
+
+        // ---------- Subset run ----------
+
         private async void Start_Click(object? sender, RoutedEventArgs e)
         {
             if (_running) return;
 
-            var assFiles = (AssFileList.ItemsSource as IEnumerable<string>)?.ToList() ?? [];
-            if (assFiles.Count == 0)
+            if (_assFiles.Count == 0)
             {
                 await ShowMessageBox("Error", I18nResources.ErrorNoAssFile);
                 return;
@@ -134,7 +267,8 @@ namespace AssFontSubset.Avalonia.Views
                 return;
             }
 
-            var args = BuildArguments(assFiles, consoleExe);
+            SaveSettings();
+            var args = BuildArguments([.. _assFiles]);
             await RunSubsetAsync(consoleExe, args);
         }
 
@@ -147,11 +281,10 @@ namespace AssFontSubset.Avalonia.Views
             if (!string.IsNullOrWhiteSpace(text) && File.Exists(text)) return text;
             var detected = DetectConsoleExe();
             if (detected is not null) return detected;
-            // Leave it to PATH resolution if nothing concrete was found.
             return string.IsNullOrWhiteSpace(text) ? null : text;
         }
 
-        private List<string> BuildArguments(List<string> assFiles, string consoleExe)
+        private List<string> BuildArguments(List<string> assFiles)
         {
             var args = new List<string>();
             args.AddRange(assFiles);
@@ -215,22 +348,23 @@ namespace AssFontSubset.Avalonia.Views
 
                 await process.WaitForExitAsync();
 
+                // Completion is shown inline; the window stays open so results/log remain visible.
                 if (process.ExitCode == 0)
                 {
                     AppendLog(Environment.NewLine + I18nResources.SuccessSubset + Environment.NewLine);
-                    await ShowMessageBox("Success", I18nResources.SuccessSubset);
+                    SetStatus(I18nResources.StatusDone);
                 }
                 else
                 {
                     var msg = string.Format(I18nResources.ErrorExitCode, process.ExitCode);
                     AppendLog(Environment.NewLine + msg + Environment.NewLine);
-                    await ShowMessageBox("Error", msg);
+                    SetStatus(I18nResources.StatusFailed);
                 }
             }
             catch (Exception ex)
             {
                 AppendLog(Environment.NewLine + ex.Message + Environment.NewLine);
-                await ShowMessageBox("Error", ex.Message);
+                SetStatus(I18nResources.StatusFailed);
             }
             finally
             {
@@ -243,7 +377,10 @@ namespace AssFontSubset.Avalonia.Views
             _running = running;
             Start.IsEnabled = !running;
             Progressing.IsIndeterminate = running;
+            if (running) SetStatus(I18nResources.StatusRunning);
         }
+
+        private void SetStatus(string text) => StatusText.Text = text;
 
         private static string QuoteIfNeeded(string s) => s.Contains(' ') ? $"\"{s}\"" : s;
 
@@ -262,32 +399,6 @@ namespace AssFontSubset.Avalonia.Views
         {
             var box = MessageBoxManager.GetMessageBoxStandard(title, message, ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.None, WindowStartupLocation.CenterOwner);
             await box.ShowWindowDialogAsync(this);
-        }
-
-        private void DragOver_Files(object? sender, DragEventArgs e)
-        {
-            var files = e.DataTransfer.TryGetFiles();
-            e.DragEffects = files is { Length: > 0 } ? DragDropEffects.Copy : DragDropEffects.None;
-            e.Handled = true;
-        }
-
-        private void Drop_Files(object? sender, DragEventArgs e)
-        {
-            var files = e.DataTransfer.TryGetFiles();
-            if (files is not { Length: > 0 }) return;
-
-            var paths = files.Select(f => f.Path.LocalPath).ToArray();
-
-            // A dropped folder sets the font directory; dropped ass files are queued.
-            var folder = paths.FirstOrDefault(Directory.Exists);
-            if (folder is not null)
-            {
-                FontFolder.Text = folder;
-            }
-
-            var assPaths = paths.Where(p => string.Equals(Path.GetExtension(p), ".ass", StringComparison.OrdinalIgnoreCase));
-            AddAssFiles(assPaths);
-            e.Handled = true;
         }
     }
 }
