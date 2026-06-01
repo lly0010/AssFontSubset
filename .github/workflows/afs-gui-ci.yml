@@ -1,0 +1,60 @@
+name: Build afs.gui
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'AssFontSubset.Avalonia/**.cs'
+      - 'AssFontSubset.Avalonia/**.axaml'
+      - 'AssFontSubset.Avalonia/**.csproj'
+      - 'AssFontSubset.Avalonia/**.resx'
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - 'AssFontSubset.Avalonia/**.cs'
+      - 'AssFontSubset.Avalonia/**.axaml'
+      - 'AssFontSubset.Avalonia/**.csproj'
+      - 'AssFontSubset.Avalonia/**.resx'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build-gui-${{ matrix.arch }}
+    runs-on: windows-latest
+    env:
+      framework: net10.0
+      identifier: win-${{ matrix.arch }}
+    strategy:
+      matrix:
+        dotnet_version: ['10.x']
+        arch: [x64, arm64]
+
+    steps:
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ matrix.dotnet_version }}
+
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Publish GUI
+      run: |
+        cd ./AssFontSubset.Avalonia
+        dotnet restore
+        dotnet publish -c Release -r ${{ env.identifier }} -f ${{ env.framework }} --self-contained -p:PublishSingleFile=true
+
+    - name: Set short version
+      shell: bash
+      run: |
+          ver_short=`git rev-parse --short HEAD`
+          echo "VERSION=$ver_short" >> $GITHUB_ENV
+
+    - name: Upload GUI files
+      uses: actions/upload-artifact@v7
+      with:
+        name: AssFontSubset.Avalonia_g${{ env.VERSION }}_${{ env.identifier }}
+        path: |
+          AssFontSubset.Avalonia/bin/Release/${{ env.framework }}/${{ env.identifier }}/publish/
+          !AssFontSubset.Avalonia/bin/Release/${{ env.framework }}/${{ env.identifier }}/publish/*.pdb

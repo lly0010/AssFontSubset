@@ -78,6 +78,69 @@ namespace AssFontSubset.Avalonia.I18n {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Backend.
+        /// </summary>
+        public static string Backend {
+            get {
+                return ResourceManager.GetString("Backend", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Browse.
+        /// </summary>
+        public static string Browse {
+            get {
+                return ResourceManager.GetString("Browse", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Console Program.
+        /// </summary>
+        public static string ConsoleExe {
+            get {
+                return ResourceManager.GetString("ConsoleExe", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Path to AssFontSubset.Console....
+        /// </summary>
+        public static string ConsoleExeTip {
+            get {
+                return ResourceManager.GetString("ConsoleExeTip", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Subset failed. Process exited with code {0}....
+        /// </summary>
+        public static string ErrorExitCode {
+            get {
+                return ResourceManager.GetString("ErrorExitCode", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to AssFontSubset.Console was not found....
+        /// </summary>
+        public static string ErrorNoConsole {
+            get {
+                return ResourceManager.GetString("ErrorNoConsole", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Output log will be shown here....
+        /// </summary>
+        public static string LogOutput {
+            get {
+                return ResourceManager.GetString("LogOutput", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Clear.
         /// </summary>
         public static string ClearInput {

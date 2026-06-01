@@ -1,0 +1,146 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create/use for the release (e.g. v2.1.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  # ---- Console (AOT, native harfbuzz baked in) ----
+  build-console:
+    name: console-${{ matrix.config.target }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.config.os }}
+    env:
+      identifier: ${{ matrix.config.target }}-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        harfbuzz_ver: ['11.4.5']
+        dotnet_version: ['10.x']
+        config:
+          - os: windows-latest
+            target: win
+            framework: net10.0
+          - os: windows-latest
+            target: linux-musl
+            framework: net10.0
+          - os: macos-latest
+            target: osx
+            framework: net10.0
+        arch: [x64, arm64]
+
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ matrix.dotnet_version }}
+
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup Zig Compiler (target linux)
+      if: matrix.config.target == 'linux-musl'
+      uses: mlugg/setup-zig@v2.2.1
+      with:
+        version: "master"
+
+    - name: Add llvm-objcopy (target linux)
+      if: matrix.config.target == 'linux-musl'
+      run: |
+        Invoke-WebRequest -Uri https://github.com/MIRIMIRIM/build-harfbuzz/releases/download/utils/llvm-objcopy.exe -OutFile ./AssFontSubset.Console/llvm-objcopy.exe
+
+    - name: Publish console
+      run: |
+        cd ./AssFontSubset.Console
+        dotnet restore
+        dotnet publish -c Release -r ${{ env.identifier }} -f ${{ matrix.config.framework }}
+
+    - name: Stage artifact
+      shell: bash
+      run: |
+        pub="AssFontSubset.Console/bin/Release/${{ matrix.config.framework }}/${{ env.identifier }}/publish"
+        rm -f "$pub"/*.a "$pub"/*.pdb "$pub"/*.dbg "$pub"/*.dwarf
+        rm -rf "$pub"/*.dSYM
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: AssFontSubset.Console_${{ env.identifier }}
+        path: AssFontSubset.Console/bin/Release/${{ matrix.config.framework }}/${{ env.identifier }}/publish/
+
+  # ---- GUI (Avalonia frontend wrapping the console) ----
+  build-gui:
+    name: gui-${{ matrix.rid }}
+    runs-on: ubuntu-latest
+    env:
+      framework: net10.0
+    strategy:
+      fail-fast: false
+      matrix:
+        dotnet_version: ['10.x']
+        rid: [win-x64, win-arm64, osx-x64, osx-arm64, linux-x64, linux-arm64]
+
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: ${{ matrix.dotnet_version }}
+
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Publish GUI
+      run: |
+        cd ./AssFontSubset.Avalonia
+        dotnet restore
+        dotnet publish -c Release -r ${{ matrix.rid }} -f ${{ env.framework }} --self-contained -p:PublishSingleFile=true
+
+    - name: Stage artifact
+      shell: bash
+      run: |
+        pub="AssFontSubset.Avalonia/bin/Release/${{ env.framework }}/${{ matrix.rid }}/publish"
+        rm -f "$pub"/*.pdb
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: AssFontSubset.GUI_${{ matrix.rid }}
+        path: AssFontSubset.Avalonia/bin/Release/${{ env.framework }}/${{ matrix.rid }}/publish/
+
+  # ---- Collect everything and publish a GitHub Release ----
+  release:
+    name: publish-release
+    needs: [build-console, build-gui]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v7
+      with:
+        path: artifacts
+
+    - name: Zip each artifact
+      shell: bash
+      run: |
+        mkdir -p dist
+        cd artifacts
+        for d in */; do
+          name="${d%/}"
+          (cd "$d" && zip -r "../../dist/${name}.zip" .)
+        done
+        ls -la ../dist
+
+    - name: Publish Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+        files: dist/*.zip
+        generate_release_notes: true
