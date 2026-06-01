@@ -134,7 +134,7 @@ public class SubsetCoreTests
     }
 
     [TestMethod]
-    public void SeparateFontFolder_MovesEachFontIntoItsOwnFolder()
+    public void SeparateFontFolder_MovesFontsIntoAssNamedFolder()
     {
         var optDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(optDir);
@@ -143,21 +143,21 @@ public class SubsetCoreTests
         {
             File.WriteAllBytes(Path.Combine(optDir, name), [1, 2, 3, 4]);
         }
-        // A non-font file at the top level should stay put.
-        File.WriteAllText(Path.Combine(optDir, "result.ass"), "x");
+        var assPath = Path.Combine(optDir, "Episode 01.ass");
+        File.WriteAllText(assPath, "x");
 
         try
         {
-            InvokeMoveFontsToSeparateFolders(optDir);
+            InvokeMoveFontsToAssFolders(optDir, [assPath]);
 
+            var assFolder = Path.Combine(optDir, "Episode 01");
             foreach (var name in fontNames)
             {
-                var folder = Path.GetFileNameWithoutExtension(name);
-                var moved = Path.Combine(optDir, folder, name);
-                Assert.IsTrue(File.Exists(moved), $"expected {moved}");
-                Assert.IsFalse(File.Exists(Path.Combine(optDir, name)), $"{name} should have been moved");
+                Assert.IsTrue(File.Exists(Path.Combine(assFolder, name)), $"expected {name} under ass folder");
+                Assert.IsFalse(File.Exists(Path.Combine(optDir, name)), $"{name} should have left the top level");
             }
-            Assert.IsTrue(File.Exists(Path.Combine(optDir, "result.ass")));
+            // The ass file itself stays at the top level.
+            Assert.IsTrue(File.Exists(assPath));
         }
         finally
         {
@@ -165,11 +165,11 @@ public class SubsetCoreTests
         }
     }
 
-    private static void InvokeMoveFontsToSeparateFolders(string optDir)
+    private static void InvokeMoveFontsToAssFolders(string optDir, IEnumerable<string> assOutputPaths)
     {
-        var method = typeof(SubsetCore).GetMethod("MoveFontsToSeparateFolders", BindingFlags.Instance | BindingFlags.NonPublic);
+        var method = typeof(SubsetCore).GetMethod("MoveFontsToAssFolders", BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.IsNotNull(method);
-        method.Invoke(new SubsetCore(), [optDir]);
+        method.Invoke(new SubsetCore(), [optDir, assOutputPaths]);
     }
 
     private static List<AssEmbeddedFile> InvokeEncodeSubsetFonts(string optDir)

@@ -47,7 +47,7 @@ internal static class Program
         };
         var separateFontFolder = new Option<bool>("--separate-font-folder")
         {
-            Description = "将每个子集化字体放入单独的子文件夹，文件夹与字体同名",
+            Description = "将子集化字体放入与 ASS 文件同名的子文件夹中",
             DefaultValueFactory = _ => false,
         };
 

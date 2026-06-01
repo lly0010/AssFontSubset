@@ -150,7 +150,7 @@ namespace AssFontSubset.Avalonia.I18n {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Put each subsetted font into its own sub-folder....
+        ///   Looks up a localized string similar to Put the subsetted fonts into a sub-folder named after the ass file....
         /// </summary>
         public static string SeparateFontFolderTip {
             get {
