@@ -45,10 +45,15 @@ internal static class Program
             Description = "将子集化生成的字体内嵌到输出的 ASS 字幕文件的 [Fonts] 段中",
             DefaultValueFactory = _ => false,
         };
+        var separateFontFolder = new Option<bool>("--separate-font-folder")
+        {
+            Description = "将每个子集化字体放入单独的子文件夹，文件夹与字体同名",
+            DefaultValueFactory = _ => false,
+        };
 
         var rootCommand = new RootCommand("使用 fonttools 或 harfbuzz-subset 生成 ASS 字幕文件的字体子集，并自动修改字体名称及 ASS 文件中对应的字体名称")
         {
-            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss
+            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder
         };
 
         rootCommand.SetAction(async (result, _) =>
@@ -61,7 +66,8 @@ internal static class Program
                 result.GetValue(binPath),
                 result.GetValue(sourceHanEllipsis),
                 result.GetValue(debug),
-                result.GetValue(embedFontToAss)
+                result.GetValue(embedFontToAss),
+                result.GetValue(separateFontFolder)
             );
         });
         var invocationConfiguration = new InvocationConfiguration
@@ -86,7 +92,7 @@ internal static class Program
         return exitCode;
     }
 
-    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss)
+    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder)
     {
         var subsetConfig = new SubsetConfig
         {
@@ -94,6 +100,7 @@ internal static class Program
             DebugMode = debug,
             Backend = subsetBackend,
             EmbedFontToAss = embedFontToAss,
+            SeparateFontFolder = separateFontFolder,
         };
         var logLevel = debug ? LogLevel.Debug : LogLevel.Information;
 

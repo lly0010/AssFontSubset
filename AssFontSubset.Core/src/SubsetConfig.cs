@@ -6,6 +6,7 @@ public struct SubsetConfig
     public bool DebugMode;
     public SubsetBackend Backend;
     public bool EmbedFontToAss;
+    public bool SeparateFontFolder;
 }
 
 public enum SubsetBackend
