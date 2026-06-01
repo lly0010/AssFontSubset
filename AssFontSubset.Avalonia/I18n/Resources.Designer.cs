@@ -123,6 +123,24 @@ namespace AssFontSubset.Avalonia.I18n {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Embed Fonts.
+        /// </summary>
+        public static string EmbedFontToAss {
+            get {
+                return ResourceManager.GetString("EmbedFontToAss", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Embed the subsetted fonts into the [Fonts] section....
+        /// </summary>
+        public static string EmbedFontToAssTip {
+            get {
+                return ResourceManager.GetString("EmbedFontToAssTip", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to AssFontSubset.Console was not found....
         /// </summary>
         public static string ErrorNoConsole {

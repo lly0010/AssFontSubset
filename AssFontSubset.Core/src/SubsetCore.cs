@@ -53,12 +53,58 @@ public class SubsetCore(ILogger? logger = null)
                     throw new ArgumentOutOfRangeException();
             }
 
+            var embeddedFonts = subsetConfig.EmbedFontToAss ? EncodeSubsetFonts(optDir) : [];
+
             foreach (var kv in assMulti)
             {
                 ChangeAssFontName(kv.Value, nameMap, fontMap);
+                if (embeddedFonts.Count > 0)
+                {
+                    EmbedFontsToAss(kv.Value, embeddedFonts);
+                }
                 kv.Value.WriteAssFile(kv.Key);
             }
         });
+    }
+
+    /// <summary>
+    /// Read the subsetted font files in the output directory and UU-encode them
+    /// into the ASS embedded-font representation. Subsetting is global, so the same
+    /// set of fonts is embedded into each output ass file.
+    /// </summary>
+    private List<AssEmbeddedFile> EncodeSubsetFonts(string optDir)
+    {
+        string[] fontExtensions = [".ttf", ".otf"];
+        List<AssEmbeddedFile> embeddedFonts = [];
+
+        logger?.ZLogInformation($"Start embed subset fonts into ass");
+        _stopwatch.Start();
+
+        foreach (var fontFile in Directory.EnumerateFiles(optDir)
+                     .Where(p => fontExtensions.Contains(Path.GetExtension(p).ToLowerInvariant()))
+                     .OrderBy(p => p, StringComparer.Ordinal))
+        {
+            var name = Path.GetFileName(fontFile);
+            var embeddedFont = new AssEmbeddedFile(name, name, AssEmbeddedFileType.Font);
+            embeddedFont.Encode(File.ReadAllBytes(fontFile));
+            embeddedFonts.Add(embeddedFont);
+            logger?.ZLogDebug($"Encoded font for embedding: {name}");
+        }
+
+        _stopwatch.Stop();
+        logger?.ZLogInformation($"Embed {embeddedFonts.Count} subset fonts completed, use {_stopwatch.ElapsedMilliseconds} ms");
+        _stopwatch.Reset();
+        return embeddedFonts;
+    }
+
+    private static void EmbedFontsToAss(AssData ass, List<AssEmbeddedFile> embeddedFonts)
+    {
+        foreach (var embeddedFont in embeddedFonts)
+        {
+            ass.Fonts.Files.Add(embeddedFont);
+        }
+        // Ensure the [Fonts] section is emitted even if the source ass had none.
+        ass.Sections.Add(AssSection.Fonts);
     }
 
     private IEnumerable<IGrouping<string, FontInfo>> GetFontInfoFromFiles(string dir)

@@ -26,7 +26,10 @@ Options:
   --bin-path                                     指定 pyftsubset 和 ttx 所在目录。若未指定，会使用环境变量中的
   --source-han-ellipsis                          使思源黑体和宋体的省略号居中对齐 [default: True]
   --debug                                        保留子集化期间的各种临时文件，位于 --output-dir 指定的文件夹；同时打印 出所有运行的命令 [default: False]
+  --embed-font-to-ass                            将子集化生成的字体内嵌到输出 ASS 字幕文件的 [Fonts] 段中 [default: False]
 ```
+
+> 内嵌字体（`--embed-font-to-ass`）会把生成的子集字体以 UUEncode 编码写入每个输出 ASS 的 `[Fonts]` 段，使字幕文件自带字体、便于分发。子集字体的内部名称已被改写为随机名并在字幕中引用，因此最适合 libass 系播放器（mpv 等）。同时输出目录下仍会保留独立的子集字体文件。
 
 ## AssFontSubset.Avalonia
 
@@ -36,7 +39,7 @@ Options:
 
 1. 将 GUI 与 `AssFontSubset.Console`（win64 等版本的可执行文件）放在同一目录，程序会自动检测；也可在「命令行程序」一栏手动指定其路径。
 2. 拖入或选择需要子集化的 ASS 字幕文件，「字体目录」「输出目录」会自动填入字幕同目录下的 `fonts`、`output`，也可自行修改。
-3. 选择子集化后端，按需勾选「居中思源省略号」「调试选项」。
+3. 选择子集化后端，按需勾选「居中思源省略号」「调试选项」「内嵌字体」（勾选后会把子集字体内嵌进输出字幕）。
 4. 点击「开始」，子集化日志会实时显示在下方；完成后请检查输出目录。
 
 ## 注意

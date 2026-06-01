@@ -40,10 +40,15 @@ internal static class Program
             Description = "保留子集化期间的各种临时文件，位于 --output-dir 指定的文件夹；同时打印出所有运行的命令",
             DefaultValueFactory = _ => false,
         };
+        var embedFontToAss = new Option<bool>("--embed-font-to-ass")
+        {
+            Description = "将子集化生成的字体内嵌到输出的 ASS 字幕文件的 [Fonts] 段中",
+            DefaultValueFactory = _ => false,
+        };
 
         var rootCommand = new RootCommand("使用 fonttools 或 harfbuzz-subset 生成 ASS 字幕文件的字体子集，并自动修改字体名称及 ASS 文件中对应的字体名称")
         {
-            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug
+            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss
         };
 
         rootCommand.SetAction(async (result, _) =>
@@ -55,7 +60,8 @@ internal static class Program
                 result.GetValue(subsetBackend),
                 result.GetValue(binPath),
                 result.GetValue(sourceHanEllipsis),
-                result.GetValue(debug)
+                result.GetValue(debug),
+                result.GetValue(embedFontToAss)
             );
         });
         var invocationConfiguration = new InvocationConfiguration
@@ -80,13 +86,14 @@ internal static class Program
         return exitCode;
     }
 
-    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug)
+    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss)
     {
         var subsetConfig = new SubsetConfig
         {
             SourceHanEllipsis = sourceHanEllipsis,
             DebugMode = debug,
             Backend = subsetBackend,
+            EmbedFontToAss = embedFontToAss,
         };
         var logLevel = debug ? LogLevel.Debug : LogLevel.Information;
 

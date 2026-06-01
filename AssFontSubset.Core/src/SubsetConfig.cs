@@ -5,6 +5,7 @@ public struct SubsetConfig
     public bool SourceHanEllipsis;
     public bool DebugMode;
     public SubsetBackend Backend;
+    public bool EmbedFontToAss;
 }
 
 public enum SubsetBackend

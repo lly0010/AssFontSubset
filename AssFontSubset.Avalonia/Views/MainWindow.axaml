@@ -55,8 +55,10 @@
         </StackPanel>
         <CheckBox x:Name="SourceHanEllipsis" Content="{x:Static lang:Resources.SourceHanEllipsis}" IsChecked="True" Margin="0,0,16,0"
                   ToolTip.Tip="{x:Static lang:Resources.SourceHanEllipsisTip}"/>
-        <CheckBox x:Name="Debug" Content="{x:Static lang:Resources.DebugOption}" IsChecked="False"
+        <CheckBox x:Name="Debug" Content="{x:Static lang:Resources.DebugOption}" IsChecked="False" Margin="0,0,16,0"
                   ToolTip.Tip="{x:Static lang:Resources.DebugOptionTip}"/>
+        <CheckBox x:Name="EmbedFontToAss" Content="{x:Static lang:Resources.EmbedFontToAss}" IsChecked="False"
+                  ToolTip.Tip="{x:Static lang:Resources.EmbedFontToAssTip}"/>
       </WrapPanel>
       <Button x:Name="Start" Grid.Column="1" Content="{x:Static lang:Resources.StartButton}" Click="Start_Click"
               MinWidth="160" Height="48" FontSize="22" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
