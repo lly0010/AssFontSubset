@@ -29,10 +29,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AssFontSubset.Core\AssFontSubset.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Update="I18n\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

@@ -50,4 +50,25 @@
     <data name="BackendHarfbuzzSubsetTip" xml:space="preserve">
         <value>使用 Harfbuzz-Subset 子集化字体。</value>
     </data>
+    <data name="Browse" xml:space="preserve">
+        <value>浏览</value>
+    </data>
+    <data name="Backend" xml:space="preserve">
+        <value>子集化后端</value>
+    </data>
+    <data name="ConsoleExe" xml:space="preserve">
+        <value>命令行程序</value>
+    </data>
+    <data name="ConsoleExeTip" xml:space="preserve">
+        <value>AssFontSubset.Console 的路径。默认会自动检测本程序同目录下的可执行文件，必要时可手动指定。</value>
+    </data>
+    <data name="LogOutput" xml:space="preserve">
+        <value>子集化日志将显示在此处……</value>
+    </data>
+    <data name="ErrorNoConsole" xml:space="preserve">
+        <value>未找到 AssFontSubset.Console，请手动指定其路径。</value>
+    </data>
+    <data name="ErrorExitCode" xml:space="preserve">
+        <value>子集化失败，进程退出码为 {0}，请查看日志。</value>
+    </data>
 </root>

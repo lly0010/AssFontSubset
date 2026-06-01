@@ -30,7 +30,14 @@ Options:
 
 ## AssFontSubset.Avalonia
 
-大致可以参考 [v1 README](./README_v1.md) 中的 gui 使用方法，目前不支持显示实时的子集化进度和 harfbuzz-subset 后端。
+跨平台图形前端，是对 `AssFontSubset.Console` 的图形化封装：它在后台调用命令行程序进行子集化，并实时显示其运行日志，因此与命令行后端能力一致（同时支持 PyFontTools 和 HarfBuzz-Subset 后端）。
+
+使用方法：
+
+1. 将 GUI 与 `AssFontSubset.Console`（win64 等版本的可执行文件）放在同一目录，程序会自动检测；也可在「命令行程序」一栏手动指定其路径。
+2. 拖入或选择需要子集化的 ASS 字幕文件，「字体目录」「输出目录」会自动填入字幕同目录下的 `fonts`、`output`，也可自行修改。
+3. 选择子集化后端，按需勾选「居中思源省略号」「调试选项」。
+4. 点击「开始」，子集化日志会实时显示在下方；完成后请检查输出目录。
 
 ## 注意
 
@@ -39,8 +46,7 @@ Options:
 
 ## Todo
 
-1. 考虑移除 gui 支持
-2. 考虑增加对 fontations subset (klippa) 的支持
+1. 考虑增加对 fontations subset (klippa) 的支持
 3. 不确定是否要支持可变字体（variable fonts）
 4. 不确定是否要恢复检查更新的功能
 

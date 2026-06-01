@@ -60,4 +60,25 @@
     <data name="BackendHarfbuzzSubsetTip" xml:space="preserve">
         <value>Use Harfbuzz-Subset subset fonts.</value>
     </data>
+    <data name="Browse" xml:space="preserve">
+        <value>Browse</value>
+    </data>
+    <data name="Backend" xml:space="preserve">
+        <value>Backend</value>
+    </data>
+    <data name="ConsoleExe" xml:space="preserve">
+        <value>Console Program</value>
+    </data>
+    <data name="ConsoleExeTip" xml:space="preserve">
+        <value>Path to AssFontSubset.Console. Auto-detected next to this app; set it manually if needed.</value>
+    </data>
+    <data name="LogOutput" xml:space="preserve">
+        <value>Output log will be shown here...</value>
+    </data>
+    <data name="ErrorNoConsole" xml:space="preserve">
+        <value>AssFontSubset.Console was not found. Please specify its path.</value>
+    </data>
+    <data name="ErrorExitCode" xml:space="preserve">
+        <value>Subset failed. Process exited with code {0}. Please check the log.</value>
+    </data>
 </root>
