@@ -93,4 +93,22 @@
     <data name="SeparateFontFolderTip" xml:space="preserve">
         <value>Put the subsetted fonts into a sub-folder named after the ass file (output/&lt;assname&gt;/...).</value>
     </data>
+    <data name="AddFolder" xml:space="preserve">
+        <value>Add Folder</value>
+    </data>
+    <data name="RemoveSelected" xml:space="preserve">
+        <value>Remove</value>
+    </data>
+    <data name="StatusReady" xml:space="preserve">
+        <value>Ready</value>
+    </data>
+    <data name="StatusRunning" xml:space="preserve">
+        <value>Subsetting...</value>
+    </data>
+    <data name="StatusDone" xml:space="preserve">
+        <value>Done. Please check the output folder.</value>
+    </data>
+    <data name="StatusFailed" xml:space="preserve">
+        <value>Failed. Please check the log.</value>
+    </data>
 </root>
