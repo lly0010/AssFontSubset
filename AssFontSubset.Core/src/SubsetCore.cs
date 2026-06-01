@@ -67,7 +67,7 @@ public class SubsetCore(ILogger? logger = null)
 
             if (subsetConfig.SeparateFontFolder)
             {
-                MoveFontsToSeparateFolders(optDir);
+                MoveFontsToAssFolders(optDir, assMulti.Keys);
             }
         });
     }
@@ -79,21 +79,39 @@ public class SubsetCore(ILogger? logger = null)
             .Where(p => FontExtensions.Contains(Path.GetExtension(p).ToLowerInvariant()));
 
     /// <summary>
-    /// Move each subsetted font file into its own sub-folder named after the font
-    /// (i.e. output/&lt;fontname&gt;/&lt;fontname&gt;.ttf).
+    /// Move the subsetted fonts into a sub-folder named after the ass file
+    /// (i.e. output/&lt;assname&gt;/&lt;fonts&gt;). When there are multiple ass files,
+    /// the fonts are placed under each ass file's folder.
     /// </summary>
-    private void MoveFontsToSeparateFolders(string optDir)
+    private void MoveFontsToAssFolders(string optDir, IEnumerable<string> assOutputPaths)
     {
-        logger?.ZLogInformation($"Move subset fonts into separate folders");
-        foreach (var fontFile in EnumerateSubsetFontFiles(optDir).ToList())
+        var fontFiles = EnumerateSubsetFontFiles(optDir).ToList();
+        if (fontFiles.Count == 0) { return; }
+
+        var assNames = assOutputPaths.Select(Path.GetFileNameWithoutExtension)
+            .Where(n => !string.IsNullOrEmpty(n))
+            .Distinct()
+            .ToList();
+        if (assNames.Count == 0) { return; }
+
+        logger?.ZLogInformation($"Move subset fonts into ass-named folders");
+        foreach (var assName in assNames)
         {
-            var folderName = Path.GetFileNameWithoutExtension(fontFile);
-            var subDir = Path.Combine(optDir, folderName);
+            var subDir = Path.Combine(optDir, assName!);
             Directory.CreateDirectory(subDir);
-            var dest = Path.Combine(subDir, Path.GetFileName(fontFile));
-            if (File.Exists(dest)) { File.Delete(dest); }
-            File.Move(fontFile, dest);
-            logger?.ZLogDebug($"Moved subset font to {dest}");
+            foreach (var fontFile in fontFiles)
+            {
+                var dest = Path.Combine(subDir, Path.GetFileName(fontFile));
+                if (File.Exists(dest)) { File.Delete(dest); }
+                File.Copy(fontFile, dest);
+            }
+            logger?.ZLogDebug($"Placed {fontFiles.Count} subset fonts into {subDir}");
+        }
+
+        // The fonts now live under the ass folder(s); drop the originals at the top level.
+        foreach (var fontFile in fontFiles)
+        {
+            File.Delete(fontFile);
         }
     }
 
