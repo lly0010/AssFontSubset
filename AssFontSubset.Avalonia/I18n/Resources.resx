@@ -81,4 +81,10 @@
     <data name="ErrorExitCode" xml:space="preserve">
         <value>Subset failed. Process exited with code {0}. Please check the log.</value>
     </data>
+    <data name="EmbedFontToAss" xml:space="preserve">
+        <value>Embed Fonts</value>
+    </data>
+    <data name="EmbedFontToAssTip" xml:space="preserve">
+        <value>Embed the subsetted fonts into the [Fonts] section of the output ass files, making them self-contained (best used with libass-based players).</value>
+    </data>
 </root>

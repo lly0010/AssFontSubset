@@ -176,6 +176,9 @@ namespace AssFontSubset.Avalonia.Views
             args.Add("--debug");
             args.Add(Debug.IsChecked == true ? "true" : "false");
 
+            args.Add("--embed-font-to-ass");
+            args.Add(EmbedFontToAss.IsChecked == true ? "true" : "false");
+
             return args;
         }
 
