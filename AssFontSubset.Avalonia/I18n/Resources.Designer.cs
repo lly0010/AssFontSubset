@@ -141,6 +141,24 @@ namespace AssFontSubset.Avalonia.I18n {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Separate Folders.
+        /// </summary>
+        public static string SeparateFontFolder {
+            get {
+                return ResourceManager.GetString("SeparateFontFolder", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Put each subsetted font into its own sub-folder....
+        /// </summary>
+        public static string SeparateFontFolderTip {
+            get {
+                return ResourceManager.GetString("SeparateFontFolderTip", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to AssFontSubset.Console was not found....
         /// </summary>
         public static string ErrorNoConsole {

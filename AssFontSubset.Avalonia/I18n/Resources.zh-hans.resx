@@ -77,4 +77,10 @@
     <data name="EmbedFontToAssTip" xml:space="preserve">
         <value>将子集化生成的字体内嵌进输出 ass 的 [Fonts] 段，使字幕自带字体（建议配合 libass 系播放器使用）。</value>
     </data>
+    <data name="SeparateFontFolder" xml:space="preserve">
+        <value>独立字体文件夹</value>
+    </data>
+    <data name="SeparateFontFolderTip" xml:space="preserve">
+        <value>将每个子集化字体放入与其同名的单独子文件夹（output/&lt;字体名&gt;/&lt;字体名&gt;.ttf）。</value>
+    </data>
 </root>

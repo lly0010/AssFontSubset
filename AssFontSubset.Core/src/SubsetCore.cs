@@ -64,7 +64,37 @@ public class SubsetCore(ILogger? logger = null)
                 }
                 kv.Value.WriteAssFile(kv.Key);
             }
+
+            if (subsetConfig.SeparateFontFolder)
+            {
+                MoveFontsToSeparateFolders(optDir);
+            }
         });
+    }
+
+    private static readonly string[] FontExtensions = [".ttf", ".otf"];
+
+    private static IEnumerable<string> EnumerateSubsetFontFiles(string optDir) =>
+        Directory.EnumerateFiles(optDir)
+            .Where(p => FontExtensions.Contains(Path.GetExtension(p).ToLowerInvariant()));
+
+    /// <summary>
+    /// Move each subsetted font file into its own sub-folder named after the font
+    /// (i.e. output/&lt;fontname&gt;/&lt;fontname&gt;.ttf).
+    /// </summary>
+    private void MoveFontsToSeparateFolders(string optDir)
+    {
+        logger?.ZLogInformation($"Move subset fonts into separate folders");
+        foreach (var fontFile in EnumerateSubsetFontFiles(optDir).ToList())
+        {
+            var folderName = Path.GetFileNameWithoutExtension(fontFile);
+            var subDir = Path.Combine(optDir, folderName);
+            Directory.CreateDirectory(subDir);
+            var dest = Path.Combine(subDir, Path.GetFileName(fontFile));
+            if (File.Exists(dest)) { File.Delete(dest); }
+            File.Move(fontFile, dest);
+            logger?.ZLogDebug($"Moved subset font to {dest}");
+        }
     }
 
     /// <summary>
@@ -74,15 +104,12 @@ public class SubsetCore(ILogger? logger = null)
     /// </summary>
     private List<AssEmbeddedFile> EncodeSubsetFonts(string optDir)
     {
-        string[] fontExtensions = [".ttf", ".otf"];
         List<AssEmbeddedFile> embeddedFonts = [];
 
         logger?.ZLogInformation($"Start embed subset fonts into ass");
         _stopwatch.Start();
 
-        foreach (var fontFile in Directory.EnumerateFiles(optDir)
-                     .Where(p => fontExtensions.Contains(Path.GetExtension(p).ToLowerInvariant()))
-                     .OrderBy(p => p, StringComparer.Ordinal))
+        foreach (var fontFile in EnumerateSubsetFontFiles(optDir).OrderBy(p => p, StringComparer.Ordinal))
         {
             var name = Path.GetFileName(fontFile);
             var embeddedFont = new AssEmbeddedFile(name, name, AssEmbeddedFileType.Font);

@@ -133,6 +133,45 @@ public class SubsetCoreTests
         }
     }
 
+    [TestMethod]
+    public void SeparateFontFolder_MovesEachFontIntoItsOwnFolder()
+    {
+        var optDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(optDir);
+        var fontNames = new[] { "sample.0.SUBSET123.ttf", "another.0.SUBSET456.otf" };
+        foreach (var name in fontNames)
+        {
+            File.WriteAllBytes(Path.Combine(optDir, name), [1, 2, 3, 4]);
+        }
+        // A non-font file at the top level should stay put.
+        File.WriteAllText(Path.Combine(optDir, "result.ass"), "x");
+
+        try
+        {
+            InvokeMoveFontsToSeparateFolders(optDir);
+
+            foreach (var name in fontNames)
+            {
+                var folder = Path.GetFileNameWithoutExtension(name);
+                var moved = Path.Combine(optDir, folder, name);
+                Assert.IsTrue(File.Exists(moved), $"expected {moved}");
+                Assert.IsFalse(File.Exists(Path.Combine(optDir, name)), $"{name} should have been moved");
+            }
+            Assert.IsTrue(File.Exists(Path.Combine(optDir, "result.ass")));
+        }
+        finally
+        {
+            Directory.Delete(optDir, true);
+        }
+    }
+
+    private static void InvokeMoveFontsToSeparateFolders(string optDir)
+    {
+        var method = typeof(SubsetCore).GetMethod("MoveFontsToSeparateFolders", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(method);
+        method.Invoke(new SubsetCore(), [optDir]);
+    }
+
     private static List<AssEmbeddedFile> InvokeEncodeSubsetFonts(string optDir)
     {
         var method = typeof(SubsetCore).GetMethod("EncodeSubsetFonts", BindingFlags.Instance | BindingFlags.NonPublic);
