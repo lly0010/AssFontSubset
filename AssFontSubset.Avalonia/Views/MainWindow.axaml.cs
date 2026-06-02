@@ -97,8 +97,8 @@ namespace AssFontSubset.Avalonia.Views
 
         private void Clear_Click(object? sender, RoutedEventArgs e)
         {
+            // Keep the font directory: it is a remembered setting, not per-project input.
             _assFiles.Clear();
-            FontFolder.Text = string.Empty;
             OutputFolder.Text = string.Empty;
         }
 
@@ -172,10 +172,11 @@ namespace AssFontSubset.Avalonia.Views
             _assFiles.Clear();
             foreach (var p in merged) _assFiles.Add(p);
 
-            // Default the font/output folders based on the first ass file's directory.
+            // Default the output folder based on the first ass file's directory.
+            // The font directory is left untouched: it is a remembered setting the app never
+            // auto-changes (an empty value makes the console fall back to <ass dir>/fonts).
             var dir = Path.GetDirectoryName(_assFiles[0]);
             if (dir is null) return;
-            if (string.IsNullOrEmpty(FontFolder.Text)) FontFolder.Text = Path.Combine(dir, "fonts");
             if (string.IsNullOrEmpty(OutputFolder.Text)) OutputFolder.Text = Path.Combine(dir, "output");
         }
 
