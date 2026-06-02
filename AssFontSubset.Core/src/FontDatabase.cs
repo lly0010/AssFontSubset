@@ -105,6 +105,42 @@ public static class FontDatabase
         return JsonSerializer.Deserialize(json, FontDatabaseJsonContext.Default.ListFontDatabaseEntry) ?? [];
     }
 
+    /// <summary>
+    /// Resolve the font files needed for the given (case-insensitive) names. Returns every
+    /// file that matches a name by family/fullname/psname, plus the sibling faces sharing a
+    /// matched family (so weight/italic style-linking still works). The files are then parsed
+    /// normally, keeping subset output identical to scanning a fonts folder.
+    /// </summary>
+    public static List<string> ResolveFontFiles(List<FontDatabaseEntry> entries, IEnumerable<string> requiredNames)
+    {
+        var needed = new HashSet<string>(
+            requiredNames.Where(n => !string.IsNullOrEmpty(n)).Select(n => n.ToLowerInvariant()),
+            StringComparer.Ordinal);
+
+        static bool NameHit(FontDatabaseEntry e, HashSet<string> needed) =>
+            e.Families.Any(needed.Contains) || e.Fullnames.Any(needed.Contains) || e.Psnames.Any(needed.Contains);
+
+        var matchedFamilies = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var e in entries)
+        {
+            if (NameHit(e, needed))
+            {
+                foreach (var family in e.Families) { matchedFamilies.Add(family); }
+            }
+        }
+
+        List<string> files = [];
+        HashSet<string> seen = new(StringComparer.Ordinal);
+        foreach (var e in entries)
+        {
+            if ((NameHit(e, needed) || e.Families.Any(matchedFamilies.Contains)) && seen.Add(e.Path))
+            {
+                files.Add(e.Path);
+            }
+        }
+        return files;
+    }
+
     private static FontDatabaseEntry ToEntry(FontFaceInfoOpenType info, FileInfo file)
     {
         var families = new List<string>();

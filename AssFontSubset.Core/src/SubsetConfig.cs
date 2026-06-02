@@ -7,6 +7,7 @@ public struct SubsetConfig
     public SubsetBackend Backend;
     public bool EmbedFontToAss;
     public bool SeparateFontFolder;
+    public string? FontDatabasePath;
 }
 
 public enum SubsetBackend

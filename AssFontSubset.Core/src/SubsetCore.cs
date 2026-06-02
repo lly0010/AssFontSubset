@@ -25,15 +25,18 @@ public class SubsetCore(ILogger? logger = null)
                 throw new Exception($"Please check if file {file} exists");
             }
         }
-        if (!fontPath.Exists) { throw new Exception($"Please check if directory {fontPath} exists"); }
+        var useDatabase = !string.IsNullOrWhiteSpace(subsetConfig.FontDatabasePath);
+        if (!useDatabase && !fontPath.Exists) { throw new Exception($"Please check if directory {fontPath} exists"); }
         if (outputPath.Exists) { outputPath.Delete(true); }
         var fontDir = fontPath.FullName;
         var optDir = outputPath.FullName;
 
         await Task.Run(() =>
         {
-            var fontInfos = GetFontInfoFromFiles(fontDir);
             var assFonts = GetAssFontInfoFromFiles(path, optDir, out var assMulti);
+            var fontInfos = useDatabase
+                ? GetFontInfoFromDatabase(subsetConfig.FontDatabasePath!, assFonts.Keys)
+                : GetFontInfoFromFiles(fontDir);
             var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
             Dictionary<string, string> nameMap = [];
 
@@ -170,6 +173,38 @@ public class SubsetCore(ILogger? logger = null)
         if (TryCheckDuplicatFonts(fontInfos, out var fontInfoGroup))
         {
             throw new Exception($"Maybe have duplicate fonts in fonts directory");
+        }
+
+        return fontInfoGroup;
+    }
+
+    /// <summary>
+    /// Resolve the fonts needed by the ass files from a font database, parse only those files,
+    /// then feed them into the unchanged matching/subset pipeline (so the output is identical
+    /// to scanning a fonts folder that contains the same fonts).
+    /// </summary>
+    private IEnumerable<IGrouping<string, FontInfo>> GetFontInfoFromDatabase(string dbPath, IEnumerable<AssFontInfo> requiredAssFonts)
+    {
+        logger?.ZLogInformation($"Use font database {dbPath} to locate fonts");
+        _stopwatch.Start();
+
+        var entries = FontDatabase.Read(dbPath);
+        var requiredNames = requiredAssFonts.Select(afi => afi.Name.StartsWith('@') ? afi.Name[1..] : afi.Name);
+        var files = FontDatabase.ResolveFontFiles(entries, requiredNames)
+            .Select(p => new FileInfo(p))
+            .Where(f => f.Exists)
+            .ToArray();
+
+        logger?.ZLogInformation($"Font database matched {files.Length} font files");
+        var fontInfos = FontParse.GetFontInfos(files);
+
+        _stopwatch.Stop();
+        logger?.ZLogDebug($"Font database lookup completed, use {_stopwatch.ElapsedMilliseconds} ms");
+        _stopwatch.Reset();
+
+        if (TryCheckDuplicatFonts(fontInfos, out var fontInfoGroup))
+        {
+            throw new Exception($"Maybe have duplicate fonts in font database");
         }
 
         return fontInfoGroup;
