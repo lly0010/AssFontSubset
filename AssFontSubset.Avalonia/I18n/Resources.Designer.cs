@@ -78,6 +78,15 @@ namespace AssFontSubset.Avalonia.I18n {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to   ... (previous line repeated {0} more times).
+        /// </summary>
+        public static string LogRepeated {
+            get {
+                return ResourceManager.GetString("LogRepeated", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Add Folder.
         /// </summary>
         public static string AddFolder {

@@ -322,7 +322,9 @@ namespace AssFontSubset.Avalonia.Views
         {
             SetRunning(true);
             LogBox.Text = string.Empty;
-            AppendLog($"> {consoleExe} {string.Join(' ', args.Select(QuoteIfNeeded))}{Environment.NewLine}");
+            ResetLogBuffer();
+            StartLogFlushTimer();
+            EnqueueLog($"> {consoleExe} {string.Join(' ', args.Select(QuoteIfNeeded))}{Environment.NewLine}");
 
             try
             {
@@ -339,8 +341,8 @@ namespace AssFontSubset.Avalonia.Views
                 foreach (var a in args) psi.ArgumentList.Add(a);
 
                 using var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
-                process.OutputDataReceived += (_, ev) => { if (ev.Data is not null) AppendLogOnUi(StripAnsi(ev.Data) + Environment.NewLine); };
-                process.ErrorDataReceived += (_, ev) => { if (ev.Data is not null) AppendLogOnUi(StripAnsi(ev.Data) + Environment.NewLine); };
+                process.OutputDataReceived += (_, ev) => { if (ev.Data is not null) EnqueueLine(StripAnsi(ev.Data)); };
+                process.ErrorDataReceived += (_, ev) => { if (ev.Data is not null) EnqueueLine(StripAnsi(ev.Data)); };
 
                 process.Start();
                 process.BeginOutputReadLine();
@@ -351,23 +353,26 @@ namespace AssFontSubset.Avalonia.Views
                 // Completion is shown inline; the window stays open so results/log remain visible.
                 if (process.ExitCode == 0)
                 {
-                    AppendLog(Environment.NewLine + I18nResources.SuccessSubset + Environment.NewLine);
+                    EnqueueLog(Environment.NewLine + I18nResources.SuccessSubset + Environment.NewLine);
                     SetStatus(I18nResources.StatusDone);
                 }
                 else
                 {
                     var msg = string.Format(I18nResources.ErrorExitCode, process.ExitCode);
-                    AppendLog(Environment.NewLine + msg + Environment.NewLine);
+                    EnqueueLog(Environment.NewLine + msg + Environment.NewLine);
                     SetStatus(I18nResources.StatusFailed);
                 }
             }
             catch (Exception ex)
             {
-                AppendLog(Environment.NewLine + ex.Message + Environment.NewLine);
+                EnqueueLog(Environment.NewLine + ex.Message + Environment.NewLine);
                 SetStatus(I18nResources.StatusFailed);
             }
             finally
             {
+                StopLogFlushTimer();
+                FinishLogBuffer();
+                FlushLog();
                 SetRunning(false);
             }
         }
@@ -387,12 +392,102 @@ namespace AssFontSubset.Avalonia.Views
         private static readonly Regex AnsiRegex = new(@"\x1B\[[0-9;]*m", RegexOptions.Compiled);
         private static string StripAnsi(string s) => AnsiRegex.Replace(s, string.Empty);
 
-        private void AppendLogOnUi(string text) => Dispatcher.UIThread.Post(() => AppendLog(text));
+        // The console can emit tens of thousands of lines (e.g. one warning per event).
+        // Buffer incoming text off the UI thread, collapse consecutive duplicate lines,
+        // and flush to the TextBox in coalesced, size-capped batches so the UI never
+        // gets overwhelmed.
+        private const int MaxLogChars = 100_000;
+        private readonly StringBuilder _pendingLog = new();
+        private readonly object _pendingLogLock = new();
+        private DispatcherTimer? _logFlushTimer;
+        private string? _lastLine;
+        private int _lastLineRepeat;
 
-        private void AppendLog(string text)
+        /// <summary>Append a single streamed console line, collapsing consecutive duplicates.</summary>
+        private void EnqueueLine(string line)
         {
-            LogBox.Text += text;
-            LogBox.CaretIndex = LogBox.Text?.Length ?? 0;
+            lock (_pendingLogLock)
+            {
+                if (line == _lastLine)
+                {
+                    _lastLineRepeat++;
+                    return;
+                }
+                EmitRepeatSummaryLocked();
+                _lastLine = line;
+                _pendingLog.Append(line).Append('\n');
+            }
+        }
+
+        /// <summary>Append a (possibly multi-line) message verbatim.</summary>
+        private void EnqueueLog(string text)
+        {
+            lock (_pendingLogLock)
+            {
+                EmitRepeatSummaryLocked();
+                _lastLine = null;
+                _pendingLog.Append(text);
+            }
+        }
+
+        private void EmitRepeatSummaryLocked()
+        {
+            if (_lastLineRepeat > 0)
+            {
+                _pendingLog.Append(string.Format(I18nResources.LogRepeated, _lastLineRepeat)).Append('\n');
+                _lastLineRepeat = 0;
+            }
+        }
+
+        private void ResetLogBuffer()
+        {
+            lock (_pendingLogLock)
+            {
+                _pendingLog.Clear();
+                _lastLine = null;
+                _lastLineRepeat = 0;
+            }
+        }
+
+        private void FinishLogBuffer()
+        {
+            lock (_pendingLogLock)
+            {
+                EmitRepeatSummaryLocked();
+                _lastLine = null;
+            }
+        }
+
+        private void StartLogFlushTimer()
+        {
+            _logFlushTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _logFlushTimer.Tick += (_, _) => FlushLog();
+            _logFlushTimer.Start();
+        }
+
+        private void StopLogFlushTimer()
+        {
+            _logFlushTimer?.Stop();
+            _logFlushTimer = null;
+        }
+
+        private void FlushLog()
+        {
+            string chunk;
+            lock (_pendingLogLock)
+            {
+                if (_pendingLog.Length == 0) return;
+                chunk = _pendingLog.ToString();
+                _pendingLog.Clear();
+            }
+
+            var text = (LogBox.Text ?? string.Empty) + chunk;
+            if (text.Length > MaxLogChars)
+            {
+                text = "…" + text[^MaxLogChars..];
+            }
+            LogBox.Text = text;
+            LogBox.CaretIndex = text.Length;
         }
 
         private async Task ShowMessageBox(string title, string message)

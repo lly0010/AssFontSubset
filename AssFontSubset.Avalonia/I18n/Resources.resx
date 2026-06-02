@@ -111,4 +111,7 @@
     <data name="StatusFailed" xml:space="preserve">
         <value>Failed. Please check the log.</value>
     </data>
+    <data name="LogRepeated" xml:space="preserve">
+        <value>  ... (previous line repeated {0} more times)</value>
+    </data>
 </root>
