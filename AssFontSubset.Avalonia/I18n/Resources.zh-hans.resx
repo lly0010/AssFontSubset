@@ -104,4 +104,22 @@
     <data name="LogRepeated" xml:space="preserve">
         <value>  …（上一行又重复了 {0} 次）</value>
     </data>
+    <data name="FontDatabase" xml:space="preserve">
+        <value>字体数据库</value>
+    </data>
+    <data name="FontDatabaseTip" xml:space="preserve">
+        <value>字体索引 JSON 的路径。点「构建数据库」会扫描「字体目录」并生成。</value>
+    </data>
+    <data name="BuildDatabase" xml:space="preserve">
+        <value>构建数据库</value>
+    </data>
+    <data name="ErrorNoFontFolder" xml:space="preserve">
+        <value>请先设置字体目录。</value>
+    </data>
+    <data name="StatusDbBuilding" xml:space="preserve">
+        <value>正在构建字体数据库……</value>
+    </data>
+    <data name="StatusDbBuilt" xml:space="preserve">
+        <value>字体数据库已生成。</value>
+    </data>
 </root>

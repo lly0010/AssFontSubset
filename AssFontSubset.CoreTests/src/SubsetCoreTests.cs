@@ -165,6 +165,46 @@ public class SubsetCoreTests
         }
     }
 
+    [TestMethod]
+    public void FontDatabase_WriteRead_UsesExpectedSchemaAndRoundTrips()
+    {
+        var entry = new FontDatabaseEntry
+        {
+            Families = ["a-otf jun pro 501", "a-otf じゅん pro 501"],
+            Fullnames = ["jun501pro-bold"],
+            Psnames = ["jun501pro-bold"],
+            Weight = 600,
+            Slant = 0,
+            Path = @"C:\fonts\A-OTF Jun Pro 501.ttf",
+            Index = 0,
+            LastWriteTime = "UTC 2025-04-15 01:03:05",
+        };
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
+
+        try
+        {
+            FontDatabase.Write([entry], path);
+
+            var json = File.ReadAllText(path);
+            StringAssert.Contains(json, "\"families\"");
+            StringAssert.Contains(json, "\"fullnames\"");
+            StringAssert.Contains(json, "\"psnames\"");
+            StringAssert.Contains(json, "\"last_write_time\"");
+            StringAssert.Contains(json, "じゅん"); // non-ASCII written literally, not \uXXXX
+
+            var read = FontDatabase.Read(path);
+            Assert.AreEqual(1, read.Count);
+            CollectionAssert.AreEqual(entry.Families, read[0].Families);
+            Assert.AreEqual(600, read[0].Weight);
+            Assert.AreEqual("jun501pro-bold", read[0].Psnames.Single());
+            Assert.AreEqual(entry.LastWriteTime, read[0].LastWriteTime);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
     private static void InvokeMoveFontsToAssFolders(string optDir, IEnumerable<string> assOutputPaths)
     {
         var method = typeof(SubsetCore).GetMethod("MoveFontsToAssFolders", BindingFlags.Instance | BindingFlags.NonPublic);

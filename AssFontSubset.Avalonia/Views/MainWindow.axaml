@@ -14,7 +14,7 @@
   <DockPanel LastChildFill="True" Margin="10">
 
     <!-- Top: inputs -->
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" Margin="0,0,0,6">
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,6">
 
       <!-- ASS files -->
       <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static lang:Resources.InputAssFiles}" VerticalAlignment="Top" Margin="0,6,8,0" FontSize="14"/>
@@ -42,6 +42,15 @@
                  ToolTip.Tip="{x:Static lang:Resources.ConsoleExeTip}"/>
       <TextBox x:Name="ConsoleExe" Grid.Row="3" Grid.Column="1" Margin="0,4" VerticalContentAlignment="Center" PlaceholderText="AssFontSubset.Console"/>
       <Button Grid.Row="3" Grid.Column="2" Content="{x:Static lang:Resources.Browse}" Click="BrowseConsoleExe_Click" Margin="6,4,0,4" HorizontalContentAlignment="Center"/>
+
+      <!-- Font database -->
+      <TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static lang:Resources.FontDatabase}" VerticalAlignment="Center" Margin="0,4,8,4" FontSize="14"
+                 ToolTip.Tip="{x:Static lang:Resources.FontDatabaseTip}"/>
+      <TextBox x:Name="FontDatabase" Grid.Row="4" Grid.Column="1" Margin="0,4" VerticalContentAlignment="Center"/>
+      <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" Spacing="4" Margin="6,4,0,4">
+        <Button Content="{x:Static lang:Resources.Browse}" Click="BrowseDatabase_Click" HorizontalContentAlignment="Center"/>
+        <Button x:Name="BuildDatabase" Content="{x:Static lang:Resources.BuildDatabase}" Click="BuildDatabase_Click" HorizontalContentAlignment="Center"/>
+      </StackPanel>
 
     </Grid>
 

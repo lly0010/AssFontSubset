@@ -53,6 +53,8 @@ namespace AssFontSubset.Avalonia.Views
             ConsoleExe.Text = !string.IsNullOrWhiteSpace(settings.ConsoleExePath)
                 ? settings.ConsoleExePath
                 : DetectConsoleExe() ?? string.Empty;
+            FontFolder.Text = settings.FontFolder ?? string.Empty;
+            FontDatabase.Text = settings.FontDatabasePath ?? string.Empty;
             Backend.SelectedIndex = Math.Clamp(settings.BackendIndex, 0, 1);
             SourceHanEllipsis.IsChecked = settings.SourceHanEllipsis;
             Debug.IsChecked = settings.Debug;
@@ -65,6 +67,8 @@ namespace AssFontSubset.Avalonia.Views
             new AppSettings
             {
                 ConsoleExePath = ConsoleExe.Text,
+                FontFolder = FontFolder.Text,
+                FontDatabasePath = FontDatabase.Text,
                 BackendIndex = Backend.SelectedIndex,
                 SourceHanEllipsis = SourceHanEllipsis.IsChecked == true,
                 Debug = Debug.IsChecked == true,
@@ -269,7 +273,48 @@ namespace AssFontSubset.Avalonia.Views
 
             SaveSettings();
             var args = BuildArguments([.. _assFiles]);
-            await RunSubsetAsync(consoleExe, args);
+            await RunConsoleAsync(consoleExe, args, I18nResources.StatusRunning, I18nResources.StatusDone);
+        }
+
+        private async void BrowseDatabase_Click(object? sender, RoutedEventArgs e)
+        {
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = I18nResources.FontDatabase,
+                SuggestedFileName = "fonts.json",
+                DefaultExtension = "json",
+                FileTypeChoices = [new FilePickerFileType("JSON") { Patterns = ["*.json"] }],
+            });
+            if (file is not null) FontDatabase.Text = file.Path.LocalPath;
+        }
+
+        private async void BuildDatabase_Click(object? sender, RoutedEventArgs e)
+        {
+            if (_running) return;
+
+            var consoleExe = ResolveConsoleExe(ConsoleExe.Text);
+            if (consoleExe is null)
+            {
+                await ShowMessageBox("Error", I18nResources.ErrorNoConsole);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(FontFolder.Text))
+            {
+                await ShowMessageBox("Error", I18nResources.ErrorNoFontFolder);
+                return;
+            }
+
+            var dbPath = FontDatabase.Text;
+            if (string.IsNullOrWhiteSpace(dbPath))
+            {
+                dbPath = Path.Combine(FontFolder.Text!, "fonts.json");
+                FontDatabase.Text = dbPath;
+            }
+
+            SaveSettings();
+            var args = new List<string> { "--build-font-database", dbPath, "--fonts", FontFolder.Text! };
+            if (Debug.IsChecked == true) { args.Add("--debug"); args.Add("true"); }
+            await RunConsoleAsync(consoleExe, args, I18nResources.StatusDbBuilding, I18nResources.StatusDbBuilt);
         }
 
         /// <summary>
@@ -318,9 +363,10 @@ namespace AssFontSubset.Avalonia.Views
             return args;
         }
 
-        private async Task RunSubsetAsync(string consoleExe, List<string> args)
+        private async Task RunConsoleAsync(string consoleExe, List<string> args, string runningStatus, string doneStatus)
         {
             SetRunning(true);
+            SetStatus(runningStatus);
             LogBox.Text = string.Empty;
             ResetLogBuffer();
             StartLogFlushTimer();
@@ -353,8 +399,8 @@ namespace AssFontSubset.Avalonia.Views
                 // Completion is shown inline; the window stays open so results/log remain visible.
                 if (process.ExitCode == 0)
                 {
-                    EnqueueLog(Environment.NewLine + I18nResources.SuccessSubset + Environment.NewLine);
-                    SetStatus(I18nResources.StatusDone);
+                    EnqueueLog(Environment.NewLine + doneStatus + Environment.NewLine);
+                    SetStatus(doneStatus);
                 }
                 else
                 {
@@ -381,8 +427,8 @@ namespace AssFontSubset.Avalonia.Views
         {
             _running = running;
             Start.IsEnabled = !running;
+            BuildDatabase.IsEnabled = !running;
             Progressing.IsIndeterminate = running;
-            if (running) SetStatus(I18nResources.StatusRunning);
         }
 
         private void SetStatus(string text) => StatusText.Text = text;
