@@ -206,6 +206,37 @@ public class SubsetCoreTests
     }
 
     [TestMethod]
+    public void DeduplicateFontInfos_CollapsesIdenticalFacesButKeepsDistinctOnes()
+    {
+        static FontInfo Make(string family, bool bold, int weight, string file) => new()
+        {
+            FamilyNames = new Dictionary<int, string> { [1033] = family },
+            Bold = bold,
+            Italic = false,
+            Weight = weight,
+            Index = 0,
+            MaxpNumGlyphs = 1000,
+            FileName = file,
+        };
+
+        List<FontInfo> list =
+        [
+            Make("Foo", false, 400, "/a/Foo.otf"),
+            Make("Foo", false, 400, "/a/Foo.ttf"),       // same logical face as above
+            Make("Foo", true, 700, "/a/Foo-Bold.ttf"),   // distinct (bold)
+        ];
+
+        var method = typeof(SubsetCore).GetMethod("DeduplicateFontInfos", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(method);
+        var result = (List<FontInfo>)method.Invoke(new SubsetCore(), [list])!;
+
+        Assert.AreEqual(2, result.Count);
+        CollectionAssert.Contains(result.Select(f => f.FileName).ToList(), "/a/Foo.otf");
+        CollectionAssert.Contains(result.Select(f => f.FileName).ToList(), "/a/Foo-Bold.ttf");
+        CollectionAssert.DoesNotContain(result.Select(f => f.FileName).ToList(), "/a/Foo.ttf");
+    }
+
+    [TestMethod]
     public void FontDatabase_ResolveFontFiles_MatchesNamesAndFamilySiblingsCaseInsensitively()
     {
         var regular = new FontDatabaseEntry

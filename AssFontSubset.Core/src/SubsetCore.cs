@@ -202,12 +202,30 @@ public class SubsetCore(ILogger? logger = null)
         logger?.ZLogDebug($"Font database lookup completed, use {_stopwatch.ElapsedMilliseconds} ms");
         _stopwatch.Reset();
 
-        if (TryCheckDuplicatFonts(fontInfos, out var fontInfoGroup))
-        {
-            throw new Exception($"Maybe have duplicate fonts in font database");
-        }
+        // A large font library commonly contains the same font more than once (e.g. both .otf
+        // and .ttf, or a romanized and a CJK file name). Unlike a curated fonts folder, these
+        // are expected here, so collapse identical faces to one instead of failing.
+        var deduped = DeduplicateFontInfos(fontInfos);
+        return deduped.GroupBy(fontInfo => fontInfo.FamilyNames[FontConstant.LanguageIdEnUs]);
+    }
 
-        return fontInfoGroup;
+    private List<FontInfo> DeduplicateFontInfos(List<FontInfo> fontInfos)
+    {
+        HashSet<(string, bool, bool, int, uint, ushort)> seen = [];
+        List<FontInfo> result = [];
+        foreach (var fi in fontInfos.OrderBy(f => f.FileName, StringComparer.Ordinal))
+        {
+            var key = (fi.FamilyNames[FontConstant.LanguageIdEnUs], fi.Bold, fi.Italic, fi.Weight, fi.Index, fi.MaxpNumGlyphs);
+            if (seen.Add(key))
+            {
+                result.Add(fi);
+            }
+            else
+            {
+                logger?.ZLogDebug($"Skip duplicate font from database: {fi.FileName}");
+            }
+        }
+        return result;
     }
 
     private bool TryCheckDuplicatFonts(List<FontInfo> fontInfos, out IEnumerable<IGrouping<string, FontInfo>> fontInfoGroup)
