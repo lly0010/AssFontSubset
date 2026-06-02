@@ -283,6 +283,56 @@ public class SubsetCoreTests
         return (List<AssEmbeddedFile>)method.Invoke(new SubsetCore(), [optDir])!;
     }
 
+    [TestMethod]
+    public void ExtractEmbeddedFonts_DecodesFullDataFromRawAss()
+    {
+        var original = new byte[5000];
+        new Random(123).NextBytes(original);
+        var ef = new AssEmbeddedFile("x.ttf", "x.ttf", AssEmbeddedFileType.Font);
+        ef.Encode(original);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("[Script Info]");
+        sb.AppendLine("ScriptType: v4.00+");
+        sb.AppendLine();
+        sb.AppendLine("[Fonts]");
+        sb.AppendLine("fontname: x.ttf");
+        foreach (var d in ef.Data) sb.AppendLine(Encoding.UTF8.GetString(d.Span));
+
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".ass");
+        File.WriteAllText(path, sb.ToString());
+        try
+        {
+            var extracted = SubsetCore.ExtractEmbeddedFonts(path).ToList();
+            Assert.AreEqual(1, extracted.Count);
+            CollectionAssert.AreEqual(original, extracted[0]);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [TestMethod]
+    public void EmbedFontsToAss_ReplacesExistingEmbeddedFonts()
+    {
+        var ass = new AssData();
+        // Pre-existing embedded font in the ass.
+        var old = new AssEmbeddedFile("old.ttf", "old.ttf", AssEmbeddedFileType.Font);
+        old.Encode([9, 9, 9, 9]);
+        ass.Fonts.Files.Add(old);
+
+        var fresh = new AssEmbeddedFile("new.ttf", "new.ttf", AssEmbeddedFileType.Font);
+        fresh.Encode([1, 2, 3, 4]);
+
+        InvokeEmbedFontsToAss(ass, [fresh]);
+
+        // The old embedded font is gone; only the freshly embedded one remains.
+        Assert.AreEqual(1, ass.Fonts.Files.Count);
+        Assert.AreEqual("new.ttf", ass.Fonts.Files[0].Name);
+        Assert.IsTrue(ass.Sections.Contains(AssSection.Fonts));
+    }
+
     private static void InvokeEmbedFontsToAss(AssData ass, List<AssEmbeddedFile> embeddedFonts)
     {
         var method = typeof(SubsetCore).GetMethod("EmbedFontsToAss", BindingFlags.Static | BindingFlags.NonPublic);

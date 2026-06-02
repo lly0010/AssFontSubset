@@ -132,4 +132,10 @@
     <data name="StatusDbBuilt" xml:space="preserve">
         <value>Font database built.</value>
     </data>
+    <data name="ReembedFonts" xml:space="preserve">
+        <value>Re-embed</value>
+    </data>
+    <data name="ReembedFontsTip" xml:space="preserve">
+        <value>For ass files that already contain embedded fonts: use those embedded fonts as the source, drop the old embedding and re-subset + re-embed. No external font files needed.</value>
+    </data>
 </root>

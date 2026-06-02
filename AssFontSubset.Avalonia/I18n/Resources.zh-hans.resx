@@ -122,4 +122,10 @@
     <data name="StatusDbBuilt" xml:space="preserve">
         <value>字体数据库已生成。</value>
     </data>
+    <data name="ReembedFonts" xml:space="preserve">
+        <value>重新内嵌</value>
+    </data>
+    <data name="ReembedFontsTip" xml:space="preserve">
+        <value>针对已内嵌字体的 ASS：以其内嵌字体为字体源，删除原有内嵌，重新子集化并重新内嵌。无需外部字体文件。</value>
+    </data>
 </root>

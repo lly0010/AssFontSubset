@@ -18,6 +18,7 @@ public sealed class AppSettings
     public bool Debug { get; set; }
     public bool EmbedFontToAss { get; set; }
     public bool SeparateFontFolder { get; set; }
+    public bool ReembedFonts { get; set; }
 
     private static string SettingsPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

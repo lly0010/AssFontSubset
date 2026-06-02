@@ -87,6 +87,24 @@ namespace AssFontSubset.Avalonia.I18n {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Re-embed.
+        /// </summary>
+        public static string ReembedFonts {
+            get {
+                return ResourceManager.GetString("ReembedFonts", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to For ass files that already contain embedded fonts....
+        /// </summary>
+        public static string ReembedFontsTip {
+            get {
+                return ResourceManager.GetString("ReembedFontsTip", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Font Database.
         /// </summary>
         public static string FontDatabase {
