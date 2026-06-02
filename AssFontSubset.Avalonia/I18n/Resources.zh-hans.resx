@@ -101,4 +101,7 @@
     <data name="StatusFailed" xml:space="preserve">
         <value>子集化失败，请查看日志。</value>
     </data>
+    <data name="LogRepeated" xml:space="preserve">
+        <value>  …（上一行又重复了 {0} 次）</value>
+    </data>
 </root>
