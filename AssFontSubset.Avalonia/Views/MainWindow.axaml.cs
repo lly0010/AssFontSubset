@@ -360,6 +360,13 @@ namespace AssFontSubset.Avalonia.Views
             args.Add("--separate-font-folder");
             args.Add(SeparateFontFolder.IsChecked == true ? "true" : "false");
 
+            // Use the font database to locate fonts when it points at an existing file.
+            if (!string.IsNullOrWhiteSpace(FontDatabase.Text) && File.Exists(FontDatabase.Text))
+            {
+                args.Add("--font-database");
+                args.Add(FontDatabase.Text!);
+            }
+
             return args;
         }
 

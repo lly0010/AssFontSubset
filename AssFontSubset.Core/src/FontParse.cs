@@ -50,10 +50,11 @@ public struct FontInfo
 
 public static class FontParse
 {
-    public static List<FontInfo> GetFontInfos(DirectoryInfo dirInfo)
+    public static List<FontInfo> GetFontInfos(DirectoryInfo dirInfo) => GetFontInfos(dirInfo.GetFiles());
+
+    public static List<FontInfo> GetFontInfos(FileInfo[] fileInfos)
     {
         List<FontInfo> fontInfos = [];
-        var fileInfos = dirInfo.GetFiles();
         var faceInfos = OpenType.GetLocalFontsInfo(fileInfos);
 
         foreach (var faceInfo in faceInfos)

@@ -54,10 +54,14 @@ internal static class Program
         {
             Description = "扫描 --fonts 指定的目录（递归）并将字体索引写入此 JSON 文件，然后退出（不进行子集化）"
         };
+        var fontDatabase = new Option<FileInfo>("--font-database")
+        {
+            Description = "使用此字体索引 JSON 按名查找所需字体（替代扫描 --fonts 目录），输出不变"
+        };
 
         var rootCommand = new RootCommand("使用 fonttools 或 harfbuzz-subset 生成 ASS 字幕文件的字体子集，并自动修改字体名称及 ASS 文件中对应的字体名称")
         {
-            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase
+            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase
         };
 
         rootCommand.SetAction(async (result, _) =>
@@ -78,7 +82,8 @@ internal static class Program
                 result.GetValue(sourceHanEllipsis),
                 result.GetValue(debug),
                 result.GetValue(embedFontToAss),
-                result.GetValue(separateFontFolder)
+                result.GetValue(separateFontFolder),
+                result.GetValue(fontDatabase)
             );
         });
         var invocationConfiguration = new InvocationConfiguration
@@ -103,7 +108,7 @@ internal static class Program
         return exitCode;
     }
 
-    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder)
+    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase)
     {
         var subsetConfig = new SubsetConfig
         {
@@ -112,6 +117,7 @@ internal static class Program
             Backend = subsetBackend,
             EmbedFontToAss = embedFontToAss,
             SeparateFontFolder = separateFontFolder,
+            FontDatabasePath = fontDatabase?.FullName,
         };
         var logLevel = debug ? LogLevel.Debug : LogLevel.Information;
 

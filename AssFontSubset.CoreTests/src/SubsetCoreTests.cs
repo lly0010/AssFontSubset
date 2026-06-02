@@ -205,6 +205,39 @@ public class SubsetCoreTests
         }
     }
 
+    [TestMethod]
+    public void FontDatabase_ResolveFontFiles_MatchesNamesAndFamilySiblingsCaseInsensitively()
+    {
+        var regular = new FontDatabaseEntry
+        {
+            Families = ["myfont"], Fullnames = ["myfont regular"], Psnames = ["myfont-regular"], Path = "/f/regular.ttf",
+        };
+        var bold = new FontDatabaseEntry
+        {
+            Families = ["myfont"], Fullnames = ["myfont bold"], Psnames = ["myfont-bold"], Path = "/f/bold.ttf",
+        };
+        var other = new FontDatabaseEntry
+        {
+            Families = ["unrelated"], Fullnames = ["unrelated"], Psnames = ["unrelated"], Path = "/f/other.ttf",
+        };
+        List<FontDatabaseEntry> entries = [regular, bold, other];
+
+        // Family match (case-insensitive) pulls all sibling faces, but not unrelated fonts.
+        CollectionAssert.AreEquivalent(
+            new[] { "/f/regular.ttf", "/f/bold.ttf" },
+            FontDatabase.ResolveFontFiles(entries, ["MyFont"]));
+
+        // Matching by a face full name still pulls the whole family.
+        CollectionAssert.AreEquivalent(
+            new[] { "/f/regular.ttf", "/f/bold.ttf" },
+            FontDatabase.ResolveFontFiles(entries, ["MyFont Bold"]));
+
+        // Unrelated request returns only the unrelated file.
+        CollectionAssert.AreEquivalent(
+            new[] { "/f/other.ttf" },
+            FontDatabase.ResolveFontFiles(entries, ["Unrelated"]));
+    }
+
     private static void InvokeMoveFontsToAssFolders(string optDir, IEnumerable<string> assOutputPaths)
     {
         var method = typeof(SubsetCore).GetMethod("MoveFontsToAssFolders", BindingFlags.Instance | BindingFlags.NonPublic);
