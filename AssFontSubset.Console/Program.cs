@@ -58,10 +58,15 @@ internal static class Program
         {
             Description = "使用此字体索引 JSON 按名查找所需字体（替代扫描 --fonts 目录），输出不变"
         };
+        var reembedFonts = new Option<bool>("--reembed-fonts")
+        {
+            Description = "以 ASS 文件中已内嵌的字体为字体源：删除原有内嵌，重新子集化并重新内嵌",
+            DefaultValueFactory = _ => false,
+        };
 
         var rootCommand = new RootCommand("使用 fonttools 或 harfbuzz-subset 生成 ASS 字幕文件的字体子集，并自动修改字体名称及 ASS 文件中对应的字体名称")
         {
-            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase
+            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase, reembedFonts
         };
 
         rootCommand.SetAction(async (result, _) =>
@@ -83,7 +88,8 @@ internal static class Program
                 result.GetValue(debug),
                 result.GetValue(embedFontToAss),
                 result.GetValue(separateFontFolder),
-                result.GetValue(fontDatabase)
+                result.GetValue(fontDatabase),
+                result.GetValue(reembedFonts)
             );
         });
         var invocationConfiguration = new InvocationConfiguration
@@ -108,7 +114,7 @@ internal static class Program
         return exitCode;
     }
 
-    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase)
+    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase, bool reembedFonts)
     {
         var subsetConfig = new SubsetConfig
         {
@@ -118,6 +124,7 @@ internal static class Program
             EmbedFontToAss = embedFontToAss,
             SeparateFontFolder = separateFontFolder,
             FontDatabasePath = fontDatabase?.FullName,
+            ReembedFonts = reembedFonts,
         };
         var logLevel = debug ? LogLevel.Debug : LogLevel.Information;
 

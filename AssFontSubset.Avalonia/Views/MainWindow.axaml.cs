@@ -60,6 +60,7 @@ namespace AssFontSubset.Avalonia.Views
             Debug.IsChecked = settings.Debug;
             EmbedFontToAss.IsChecked = settings.EmbedFontToAss;
             SeparateFontFolder.IsChecked = settings.SeparateFontFolder;
+            ReembedFonts.IsChecked = settings.ReembedFonts;
         }
 
         private void SaveSettings()
@@ -74,6 +75,7 @@ namespace AssFontSubset.Avalonia.Views
                 Debug = Debug.IsChecked == true,
                 EmbedFontToAss = EmbedFontToAss.IsChecked == true,
                 SeparateFontFolder = SeparateFontFolder.IsChecked == true,
+                ReembedFonts = ReembedFonts.IsChecked == true,
             }.Save();
         }
 
@@ -379,6 +381,9 @@ namespace AssFontSubset.Avalonia.Views
                 args.Add("--font-database");
                 args.Add(FontDatabase.Text!);
             }
+
+            args.Add("--reembed-fonts");
+            args.Add(ReembedFonts.IsChecked == true ? "true" : "false");
 
             return args;
         }
