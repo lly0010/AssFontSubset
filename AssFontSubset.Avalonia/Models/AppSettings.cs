@@ -11,6 +11,8 @@ namespace AssFontSubset.Avalonia.Models;
 public sealed class AppSettings
 {
     public string? ConsoleExePath { get; set; }
+    public string? FontFolder { get; set; }
+    public string? FontDatabasePath { get; set; }
     public int BackendIndex { get; set; }
     public bool SourceHanEllipsis { get; set; } = true;
     public bool Debug { get; set; }

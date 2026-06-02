@@ -50,14 +50,25 @@ internal static class Program
             Description = "将子集化字体放入与 ASS 文件同名的子文件夹中",
             DefaultValueFactory = _ => false,
         };
+        var buildFontDatabase = new Option<FileInfo>("--build-font-database")
+        {
+            Description = "扫描 --fonts 指定的目录（递归）并将字体索引写入此 JSON 文件，然后退出（不进行子集化）"
+        };
 
         var rootCommand = new RootCommand("使用 fonttools 或 harfbuzz-subset 生成 ASS 字幕文件的字体子集，并自动修改字体名称及 ASS 文件中对应的字体名称")
         {
-            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder
+            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase
         };
 
         rootCommand.SetAction(async (result, _) =>
         {
+            var dbOut = result.GetValue(buildFontDatabase);
+            if (dbOut is not null)
+            {
+                BuildFontDatabase(result.GetValue(fontPath), dbOut, result.GetValue(debug));
+                return;
+            }
+
             await Subset(
                 result.GetValue(path)!,
                 result.GetValue(fontPath),
@@ -144,6 +155,34 @@ internal static class Program
         catch (Exception ex) 
         {
             logger.ZLogError($"{ex.Message}\u001b[0m");
+            throw;
+        }
+    }
+
+    static void BuildFontDatabase(DirectoryInfo? fontPath, FileInfo dbOut, bool debug)
+    {
+        using var factory = LoggerFactory.Create(logging =>
+        {
+            logging.SetMinimumLevel(debug ? LogLevel.Debug : LogLevel.Information);
+            logging.AddZLoggerConsole();
+        });
+        var logger = factory.CreateLogger("AssFontSubset.Console");
+
+        if (fontPath is null)
+        {
+            logger.ZLogError($"Please specify --fonts directory when building the font database");
+            throw new ArgumentException();
+        }
+
+        try
+        {
+            var entries = FontDatabase.Build(fontPath, logger);
+            FontDatabase.Write(entries, dbOut.FullName);
+            logger.ZLogInformation($"Font database written to {dbOut.FullName} ({entries.Count} faces)");
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogError($"{ex.Message}");
             throw;
         }
     }

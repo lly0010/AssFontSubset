@@ -114,4 +114,22 @@
     <data name="LogRepeated" xml:space="preserve">
         <value>  ... (previous line repeated {0} more times)</value>
     </data>
+    <data name="FontDatabase" xml:space="preserve">
+        <value>Font Database</value>
+    </data>
+    <data name="FontDatabaseTip" xml:space="preserve">
+        <value>Path to a font index JSON. Click "Build Database" to scan the Font Folder and generate it.</value>
+    </data>
+    <data name="BuildDatabase" xml:space="preserve">
+        <value>Build Database</value>
+    </data>
+    <data name="ErrorNoFontFolder" xml:space="preserve">
+        <value>Please set the Font Folder first.</value>
+    </data>
+    <data name="StatusDbBuilding" xml:space="preserve">
+        <value>Building font database...</value>
+    </data>
+    <data name="StatusDbBuilt" xml:space="preserve">
+        <value>Font database built.</value>
+    </data>
 </root>

@@ -87,6 +87,60 @@ namespace AssFontSubset.Avalonia.I18n {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Font Database.
+        /// </summary>
+        public static string FontDatabase {
+            get {
+                return ResourceManager.GetString("FontDatabase", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Path to a font index JSON....
+        /// </summary>
+        public static string FontDatabaseTip {
+            get {
+                return ResourceManager.GetString("FontDatabaseTip", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Build Database.
+        /// </summary>
+        public static string BuildDatabase {
+            get {
+                return ResourceManager.GetString("BuildDatabase", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Please set the Font Folder first.
+        /// </summary>
+        public static string ErrorNoFontFolder {
+            get {
+                return ResourceManager.GetString("ErrorNoFontFolder", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Building font database....
+        /// </summary>
+        public static string StatusDbBuilding {
+            get {
+                return ResourceManager.GetString("StatusDbBuilding", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Font database built.
+        /// </summary>
+        public static string StatusDbBuilt {
+            get {
+                return ResourceManager.GetString("StatusDbBuilt", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Add Folder.
         /// </summary>
         public static string AddFolder {
