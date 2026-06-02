@@ -111,13 +111,13 @@ namespace AssFontSubset.Avalonia.Views
                 FileTypeFilter = [new FilePickerFileType("ASS Subtitles") { Patterns = ["*.ass"] }],
             });
             if (files.Count == 0) return;
-            AddAssFiles(files.Select(f => f.Path.LocalPath));
+            AddAssFiles(files.Select(f => f.Path.LocalPath), replace: false); // Browse accumulates
         }
 
         private async void AddFolder_Click(object? sender, RoutedEventArgs e)
         {
             var dir = await PickFolderAsync(I18nResources.AddFolder);
-            if (dir is not null) AddAssFromFolder(dir);
+            if (dir is not null) AddAssFromFolder(dir, replace: true); // Add Folder replaces
         }
 
         private void RemoveSelected_Click(object? sender, RoutedEventArgs e) => RemoveSelectedAss();
@@ -141,16 +141,23 @@ namespace AssFontSubset.Avalonia.Views
             }
         }
 
-        private void AddAssFromFolder(string folder)
+        private void AddAssFromFolder(string folder, bool replace)
         {
             if (!Directory.Exists(folder)) return;
-            AddAssFiles(Directory.EnumerateFiles(folder, "*.ass", SearchOption.TopDirectoryOnly));
+            AddAssFiles(Directory.EnumerateFiles(folder, "*.ass", SearchOption.TopDirectoryOnly), replace);
         }
 
-        private void AddAssFiles(IEnumerable<string> paths)
+        /// <summary>
+        /// Add ass files to the list. When <paramref name="replace"/> is true the existing
+        /// list is replaced (drag-in / Add Folder); otherwise the files are accumulated (Browse).
+        /// </summary>
+        private void AddAssFiles(IEnumerable<string> paths, bool replace)
         {
-            // Merge, de-duplicate and keep sorted.
-            var merged = new SortedSet<string>(_assFiles, StringComparer.OrdinalIgnoreCase);
+            // Start from the current list (accumulate) or from empty (replace), then merge,
+            // de-duplicate and keep sorted.
+            var merged = replace
+                ? new SortedSet<string>(StringComparer.OrdinalIgnoreCase)
+                : new SortedSet<string>(_assFiles, StringComparer.OrdinalIgnoreCase);
             foreach (var p in paths)
             {
                 if (string.Equals(Path.GetExtension(p), ".ass", StringComparison.OrdinalIgnoreCase))
@@ -158,7 +165,9 @@ namespace AssFontSubset.Avalonia.Views
                     merged.Add(p);
                 }
             }
-            if (merged.Count == _assFiles.Count) return;
+            // Nothing valid to add: keep the current list untouched (don't wipe on a stray drop).
+            if (merged.Count == 0) return;
+            if (!replace && merged.Count == _assFiles.Count) return;
 
             _assFiles.Clear();
             foreach (var p in merged) _assFiles.Add(p);
@@ -218,11 +227,14 @@ namespace AssFontSubset.Avalonia.Views
             var paths = GetDroppedPaths(e);
             if (paths.Length == 0) return;
 
+            // Gather all dropped ass files (from dropped folders and files) and replace the list.
+            var assPaths = new List<string>();
             foreach (var folder in paths.Where(Directory.Exists))
             {
-                AddAssFromFolder(folder);
+                assPaths.AddRange(Directory.EnumerateFiles(folder, "*.ass", SearchOption.TopDirectoryOnly));
             }
-            AddAssFiles(paths.Where(p => !Directory.Exists(p)));
+            assPaths.AddRange(paths.Where(p => !Directory.Exists(p)));
+            AddAssFiles(assPaths, replace: true);
             e.Handled = true;
         }
 
