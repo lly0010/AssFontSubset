@@ -51,24 +51,16 @@ public class SubsetCore(ILogger? logger = null)
                 // independently (pooling embedded fonts across files would mix partial subsets).
                 if (subsetConfig.ReembedFonts)
                 {
-                    Directory.CreateDirectory(optDir);
-                    var embedded = path.Where(f => HasEmbeddedFonts(f.FullName)).ToArray();
                     var plain = path.Where(f => !HasEmbeddedFonts(f.FullName)).ToArray();
-
-                    foreach (var assFile in embedded)
-                    {
-                        ReembedOneFile(assFile, optDir, binPath, subsetConfig);
-                    }
-
-                    // Files without embedded fonts fall back to normal subsetting from the fonts
-                    // directory / database (still embedding the result).
                     if (plain.Length > 0)
                     {
-                        if (!useDatabase && !fontPath.Exists)
-                        {
-                            throw new Exception($"These ass have no embedded fonts and need a fonts directory: {string.Join("、", plain.Select(p => p.Name))}. Please check if directory {fontPath} exists");
-                        }
-                        SubsetNormal(plain, optDir, fontDir, useDatabase, subsetConfig, binPath, embedToAss);
+                        throw new Exception($"'重新内嵌' only works on ass that already embed fonts. These have none: {string.Join("、", plain.Select(p => p.Name))}");
+                    }
+
+                    Directory.CreateDirectory(optDir);
+                    foreach (var assFile in path)
+                    {
+                        ReembedOneFile(assFile, optDir, binPath, subsetConfig);
                     }
                 }
                 else
