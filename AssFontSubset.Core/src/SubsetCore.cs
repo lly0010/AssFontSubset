@@ -68,7 +68,12 @@ public class SubsetCore(ILogger? logger = null)
                 kv.Value.WriteAssFile(kv.Key);
             }
 
-            if (subsetConfig.SeparateFontFolder)
+            if (embedToAss && subsetConfig.EmbedOnly)
+            {
+                // Fonts are embedded; drop the loose subset font files.
+                DeleteSubsetFontFiles(optDir);
+            }
+            else if (subsetConfig.SeparateFontFolder)
             {
                 MoveFontsToAssFolders(optDir, assMulti.Keys);
             }
@@ -120,6 +125,19 @@ public class SubsetCore(ILogger? logger = null)
                 EmbedFontsToAss(kv.Value, embeddedFonts);
                 kv.Value.WriteAssFile(kv.Key);
             }
+
+            if (!config.EmbedOnly)
+            {
+                // Also output the loose subset fonts, by default into a folder named after the ass.
+                var destDir = config.SeparateFontFolder
+                    ? Path.Combine(optDir, Path.GetFileNameWithoutExtension(assFile.Name))
+                    : optDir;
+                Directory.CreateDirectory(destDir);
+                foreach (var fontFile in EnumerateSubsetFontFiles(subsetDir))
+                {
+                    File.Copy(fontFile, Path.Combine(destDir, Path.GetFileName(fontFile)), true);
+                }
+            }
         }
         finally
         {
@@ -140,6 +158,15 @@ public class SubsetCore(ILogger? logger = null)
     private static IEnumerable<string> EnumerateSubsetFontFiles(string optDir) =>
         Directory.EnumerateFiles(optDir)
             .Where(p => FontExtensions.Contains(Path.GetExtension(p).ToLowerInvariant()));
+
+    private void DeleteSubsetFontFiles(string optDir)
+    {
+        foreach (var fontFile in EnumerateSubsetFontFiles(optDir).ToList())
+        {
+            File.Delete(fontFile);
+        }
+        logger?.ZLogInformation($"Removed loose subset font files (embed only)");
+    }
 
     /// <summary>
     /// Move the subsetted fonts into a sub-folder named after the ass file

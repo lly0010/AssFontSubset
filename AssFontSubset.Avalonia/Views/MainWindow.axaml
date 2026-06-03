@@ -70,8 +70,10 @@
                   ToolTip.Tip="{x:Static lang:Resources.DebugOptionTip}"/>
         <CheckBox x:Name="EmbedFontToAss" Content="{x:Static lang:Resources.EmbedFontToAss}" IsChecked="False" Margin="0,0,16,0"
                   ToolTip.Tip="{x:Static lang:Resources.EmbedFontToAssTip}"/>
-        <CheckBox x:Name="SeparateFontFolder" Content="{x:Static lang:Resources.SeparateFontFolder}" IsChecked="False" Margin="0,0,16,0"
+        <CheckBox x:Name="SeparateFontFolder" Content="{x:Static lang:Resources.SeparateFontFolder}" IsChecked="True" Margin="0,0,16,0"
                   ToolTip.Tip="{x:Static lang:Resources.SeparateFontFolderTip}"/>
+        <CheckBox x:Name="EmbedOnly" Content="{x:Static lang:Resources.EmbedOnly}" IsChecked="False" Margin="0,0,16,0"
+                  ToolTip.Tip="{x:Static lang:Resources.EmbedOnlyTip}"/>
         <CheckBox x:Name="ReembedFonts" Content="{x:Static lang:Resources.ReembedFonts}" IsChecked="False"
                   ToolTip.Tip="{x:Static lang:Resources.ReembedFontsTip}"/>
       </WrapPanel>

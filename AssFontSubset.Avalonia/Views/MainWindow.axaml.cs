@@ -60,6 +60,7 @@ namespace AssFontSubset.Avalonia.Views
             Debug.IsChecked = settings.Debug;
             EmbedFontToAss.IsChecked = settings.EmbedFontToAss;
             SeparateFontFolder.IsChecked = settings.SeparateFontFolder;
+            EmbedOnly.IsChecked = settings.EmbedOnly;
             ReembedFonts.IsChecked = settings.ReembedFonts;
         }
 
@@ -75,6 +76,7 @@ namespace AssFontSubset.Avalonia.Views
                 Debug = Debug.IsChecked == true,
                 EmbedFontToAss = EmbedFontToAss.IsChecked == true,
                 SeparateFontFolder = SeparateFontFolder.IsChecked == true,
+                EmbedOnly = EmbedOnly.IsChecked == true,
                 ReembedFonts = ReembedFonts.IsChecked == true,
             }.Save();
         }
@@ -374,6 +376,9 @@ namespace AssFontSubset.Avalonia.Views
 
             args.Add("--separate-font-folder");
             args.Add(SeparateFontFolder.IsChecked == true ? "true" : "false");
+
+            args.Add("--embed-only");
+            args.Add(EmbedOnly.IsChecked == true ? "true" : "false");
 
             // Use the font database to locate fonts when it points at an existing file.
             if (!string.IsNullOrWhiteSpace(FontDatabase.Text) && File.Exists(FontDatabase.Text))
