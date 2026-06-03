@@ -72,10 +72,8 @@
                   ToolTip.Tip="{x:Static lang:Resources.EmbedFontToAssTip}"/>
         <CheckBox x:Name="EmbedOnly" Content="{x:Static lang:Resources.EmbedOnly}" IsChecked="False" Margin="0,0,16,0"
                   ToolTip.Tip="{x:Static lang:Resources.EmbedOnlyTip}"/>
-        <CheckBox x:Name="ReembedFonts" Content="{x:Static lang:Resources.ReembedFonts}" IsChecked="False" Margin="0,0,16,0"
+        <CheckBox x:Name="ReembedFonts" Content="{x:Static lang:Resources.ReembedFonts}" IsChecked="False"
                   ToolTip.Tip="{x:Static lang:Resources.ReembedFontsTip}"/>
-        <CheckBox x:Name="ReplaceOriginal" Content="{x:Static lang:Resources.ReplaceOriginal}" IsChecked="False"
-                  ToolTip.Tip="{x:Static lang:Resources.ReplaceOriginalTip}"/>
       </WrapPanel>
       <Button x:Name="Start" Grid.Column="1" Content="{x:Static lang:Resources.StartButton}" Click="Start_Click"
               MinWidth="160" Height="48" FontSize="22" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>

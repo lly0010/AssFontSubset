@@ -10,7 +10,6 @@ public struct SubsetConfig
     public string? FontDatabasePath;
     public bool ReembedFonts;
     public bool EmbedOnly;
-    public bool ReplaceOriginal;
 }
 
 public enum SubsetBackend

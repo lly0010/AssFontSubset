@@ -30,55 +30,31 @@ public class SubsetCore(ILogger? logger = null)
         // the ass' own existing embedded fonts.
         var embedToAss = subsetConfig.EmbedFontToAss || subsetConfig.ReembedFonts;
         if (!useDatabase && !subsetConfig.ReembedFonts && !fontPath.Exists) { throw new Exception($"Please check if directory {fontPath} exists"); }
-
-        // Replace original: subset to a temp dir, then mirror the result over the input files.
-        // This avoids ever wiping the input directory.
-        var replaceOriginal = subsetConfig.ReplaceOriginal;
-        if (replaceOriginal)
-        {
-            outputPath = new DirectoryInfo(Path.Combine(Path.GetTempPath(), "AssFontSubset_inplace_" + Guid.NewGuid().ToString("N")));
-        }
-
         if (outputPath.Exists) { outputPath.Delete(true); }
         var fontDir = fontPath.FullName;
         var optDir = outputPath.FullName;
 
         await Task.Run(() =>
         {
-            try
+            // Re-embed: each ass already carries only its own glyphs, so process every file
+            // independently (pooling embedded fonts across files would mix partial subsets).
+            if (subsetConfig.ReembedFonts)
             {
-                // Re-embed: each ass already carries only its own glyphs, so process every file
-                // independently (pooling embedded fonts across files would mix partial subsets).
-                if (subsetConfig.ReembedFonts)
+                var plain = path.Where(f => !HasEmbeddedFonts(f.FullName)).ToArray();
+                if (plain.Length > 0)
                 {
-                    var plain = path.Where(f => !HasEmbeddedFonts(f.FullName)).ToArray();
-                    if (plain.Length > 0)
-                    {
-                        throw new Exception($"'重新内嵌' only works on ass that already embed fonts. These have none: {string.Join("、", plain.Select(p => p.Name))}");
-                    }
-
-                    Directory.CreateDirectory(optDir);
-                    foreach (var assFile in path)
-                    {
-                        ReembedOneFile(assFile, optDir, binPath, subsetConfig);
-                    }
-                }
-                else
-                {
-                    SubsetNormal(path, optDir, fontDir, useDatabase, subsetConfig, binPath, embedToAss);
+                    throw new Exception($"'重新内嵌' only works on ass that already embed fonts. These have none: {string.Join("、", plain.Select(p => p.Name))}");
                 }
 
-                if (replaceOriginal)
+                Directory.CreateDirectory(optDir);
+                foreach (var assFile in path)
                 {
-                    MirrorOutputOverOriginals(optDir, path);
+                    ReembedOneFile(assFile, optDir, binPath, subsetConfig);
                 }
             }
-            finally
+            else
             {
-                if (replaceOriginal && !subsetConfig.DebugMode)
-                {
-                    TryDeleteDirectory(optDir);
-                }
+                SubsetNormal(path, optDir, fontDir, useDatabase, subsetConfig, binPath, embedToAss);
             }
         });
     }
@@ -134,42 +110,6 @@ public class SubsetCore(ILogger? logger = null)
             }
         }
         return false;
-    }
-
-    /// <summary>
-    /// Overwrite the original ass files with the subset results from <paramref name="tempOut"/>,
-    /// and copy each ass' font folder / loose fonts next to the original file.
-    /// </summary>
-    private void MirrorOutputOverOriginals(string tempOut, FileInfo[] path)
-    {
-        logger?.ZLogInformation($"Replace original files in place");
-        foreach (var assFile in path)
-        {
-            var producedAss = Path.Combine(tempOut, assFile.Name);
-            if (File.Exists(producedAss))
-            {
-                File.Copy(producedAss, assFile.FullName, true);
-            }
-
-            var assName = Path.GetFileNameWithoutExtension(assFile.Name);
-            var producedFolder = Path.Combine(tempOut, assName);
-            if (Directory.Exists(producedFolder))
-            {
-                var destFolder = Path.Combine(assFile.Directory!.FullName, assName);
-                Directory.CreateDirectory(destFolder);
-                foreach (var f in Directory.EnumerateFiles(producedFolder))
-                {
-                    File.Copy(f, Path.Combine(destFolder, Path.GetFileName(f)), true);
-                }
-            }
-        }
-
-        // Loose fonts at the temp root (when not using same-named folders) go next to the first ass.
-        var baseDir = path[0].Directory!.FullName;
-        foreach (var f in EnumerateSubsetFontFiles(tempOut))
-        {
-            File.Copy(f, Path.Combine(baseDir, Path.GetFileName(f)), true);
-        }
     }
 
     private void RunSubsetBackend(Dictionary<string, List<SubsetFont>> subsetFonts, string outDir, DirectoryInfo? binPath, SubsetConfig config, out Dictionary<string, string> nameMap)
