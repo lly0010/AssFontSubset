@@ -129,7 +129,7 @@
         <value>内嵌字体到 ASS 后，不再额外输出独立的子集化字体文件（只保留自带字体的 ass）。</value>
     </data>
     <data name="ReplaceOriginal" xml:space="preserve">
-        <value>替换原文件</value>
+        <value>⚠ 替换原文件</value>
     </data>
     <data name="ReplaceOriginalTip" xml:space="preserve">
         <value>危险：用子集化结果原地覆盖原始 ASS 文件（字体放到旁边的同名文件夹），不另建 output 目录。每次启动默认关闭，需手动开启。</value>
