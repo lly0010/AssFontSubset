@@ -396,26 +396,132 @@ public class SubsetCore(ILogger? logger = null)
         foreach (var assFile in assFiles)
         {
             var assFileNew = Path.Combine(optDir, assFile.Name);
-            var assFonts = AssFont.GetAssFonts(assFile.FullName, out var ass, logger);
 
-            foreach (var kv in assFonts)
+            // The parser only accepts standard centisecond times (H:MM:SS.cc). If the ass uses
+            // e.g. millisecond precision, normalize a temp copy first so parsing doesn't fail.
+            var parsePath = assFile.FullName;
+            string? tempPath = null;
+            try
             {
-                if (multiAssFonts.Count > 0 && multiAssFonts.TryGetValue(kv.Key, out var value))
+                var content = File.ReadAllText(assFile.FullName);
+                if (TryNormalizeAssTimeFields(content, out var normalized))
                 {
-                    value.UnionWith(kv.Value);
+                    logger?.ZLogWarning($"Normalized non-standard event time precision in {assFile.Name}");
+                    tempPath = Path.Combine(Path.GetTempPath(), "AssFontSubset_" + Guid.NewGuid().ToString("N") + ".ass");
+                    File.WriteAllText(tempPath, normalized);
+                    parsePath = tempPath;
                 }
-                else
+
+                var assFonts = AssFont.GetAssFonts(parsePath, out var ass, logger);
+
+                foreach (var kv in assFonts)
                 {
-                    multiAssFonts.Add(kv.Key, kv.Value);
+                    if (multiAssFonts.Count > 0 && multiAssFonts.TryGetValue(kv.Key, out var value))
+                    {
+                        value.UnionWith(kv.Value);
+                    }
+                    else
+                    {
+                        multiAssFonts.Add(kv.Key, kv.Value);
+                    }
                 }
+                assDataWithOutputName.Add(assFileNew, ass);
             }
-            assDataWithOutputName.Add(assFileNew, ass);
+            finally
+            {
+                if (tempPath is not null && File.Exists(tempPath)) { File.Delete(tempPath); }
+            }
         }
 
         _stopwatch.Stop();
         logger?.ZLogInformation($"Ass font info parsing completed, use {_stopwatch.ElapsedMilliseconds} ms");
         _stopwatch.Reset();
         return multiAssFonts;
+    }
+
+    /// <summary>
+    /// Normalize the Start/End time fields of event lines to standard centisecond format
+    /// (H:MM:SS.cc). Returns true (and the rewritten content) only when something changed,
+    /// so well-formed ass files are left untouched.
+    /// </summary>
+    internal static bool TryNormalizeAssTimeFields(string content, out string normalized)
+    {
+        var lines = content.Split('\n');
+        var changed = false;
+        var inEvents = false;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var head = line.TrimStart();
+            if (head.StartsWith('['))
+            {
+                inEvents = head.TrimEnd('\r', ' ', '\t').Equals("[Events]", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+            if (!inEvents) { continue; }
+            if (!head.StartsWith("Dialogue:", StringComparison.OrdinalIgnoreCase) &&
+                !head.StartsWith("Comment:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var cr = line.EndsWith('\r') ? "\r" : string.Empty;
+            var body = cr.Length > 0 ? line[..^1] : line;
+            var colon = body.IndexOf(':');
+            if (colon < 0) { continue; }
+
+            var prefix = body[..(colon + 1)];
+            // Fields: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text (Text may hold commas).
+            var parts = body[(colon + 1)..].Split(',', 10);
+            if (parts.Length < 3) { continue; }
+
+            var start = NormalizeTimeField(parts[1]);
+            var end = NormalizeTimeField(parts[2]);
+            if (start is null && end is null) { continue; }
+
+            if (start is not null) { parts[1] = start; }
+            if (end is not null) { parts[2] = end; }
+            lines[i] = prefix + string.Join(',', parts) + cr;
+            changed = true;
+        }
+
+        normalized = changed ? string.Join('\n', lines) : content;
+        return changed;
+    }
+
+    /// <summary>Returns the centisecond-normalized time, or null when the field is already fine / not a time.</summary>
+    private static string? NormalizeTimeField(string field)
+    {
+        var t = field.Trim();
+        var c1 = t.IndexOf(':');
+        if (c1 <= 0) { return null; }
+        var c2 = t.IndexOf(':', c1 + 1);
+        if (c2 < 0) { return null; }
+        var dot = t.IndexOf('.', c2 + 1);
+        if (dot < 0) { return null; }
+
+        var h = t[..c1];
+        var mm = t[(c1 + 1)..c2];
+        var ss = t[(c2 + 1)..dot];
+        var frac = t[(dot + 1)..];
+        if (!AllAsciiDigits(h) || !AllAsciiDigits(mm) || !AllAsciiDigits(ss) || !AllAsciiDigits(frac) || frac.Length == 0)
+        {
+            return null;
+        }
+
+        var cc = frac.Length >= 2 ? frac[..2] : frac.PadRight(2, '0');
+        var result = $"{h}:{mm.PadLeft(2, '0')}:{ss.PadLeft(2, '0')}.{cc}";
+        return result == field ? null : result;
+    }
+
+    private static bool AllAsciiDigits(ReadOnlySpan<char> s)
+    {
+        foreach (var ch in s)
+        {
+            if (ch is < '0' or > '9') { return false; }
+        }
+        return s.Length > 0;
     }
 
     Dictionary<string, List<SubsetFont>> GetSubsetFonts(IEnumerable<IGrouping<string, FontInfo>> fontInfos, Dictionary<AssFontInfo, HashSet<Rune>> assFonts, out Dictionary<FontInfo, List<AssFontInfo>> fontMap)

@@ -284,6 +284,38 @@ public class SubsetCoreTests
     }
 
     [TestMethod]
+    public void TryNormalizeAssTimeFields_FixesNonStandardTimesAndLeavesStandardAlone()
+    {
+        static (bool changed, string output) Normalize(string input)
+        {
+            var method = typeof(SubsetCore).GetMethod("TryNormalizeAssTimeFields", BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.IsNotNull(method);
+            var args = new object?[] { input, null };
+            var changed = (bool)method.Invoke(null, args)!;
+            return (changed, (string)args[1]!);
+        }
+
+        // Millisecond precision is normalized to centiseconds; text (with commas) is preserved.
+        var ms = "[Events]\n" +
+                 "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n" +
+                 "Dialogue: 0,0:00:00.000,0:00:01.234,Default,,0,0,0,,hi, there\n";
+        var (changedMs, outMs) = Normalize(ms);
+        Assert.IsTrue(changedMs);
+        StringAssert.Contains(outMs, "Dialogue: 0,0:00:00.00,0:00:01.23,Default,,0,0,0,,hi, there");
+
+        // Two-digit hours stay valid and are left as-is.
+        var hh = "[Events]\nDialogue: 0,0:00:00.00,0:00:01.23,Default,,0,0,0,,x\n";
+        var (changedHh, outHh) = Normalize(hh);
+        Assert.IsFalse(changedHh);
+        Assert.AreEqual(hh, outHh);
+
+        // Time-like text outside [Events] is never touched.
+        var nonEvent = "[Script Info]\nTitle: clip 0:00:00.000\n";
+        var (changedNon, _) = Normalize(nonEvent);
+        Assert.IsFalse(changedNon);
+    }
+
+    [TestMethod]
     public void ExtractEmbeddedFonts_DecodesFullDataFromRawAss()
     {
         var original = new byte[5000];
