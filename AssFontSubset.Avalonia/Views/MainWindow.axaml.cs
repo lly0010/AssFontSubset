@@ -290,12 +290,6 @@ namespace AssFontSubset.Avalonia.Views
                 return;
             }
 
-            // Overwriting the originals is destructive: confirm first.
-            if (ReplaceOriginal.IsChecked == true && !await ConfirmAsync(I18nResources.ReplaceOriginalConfirm))
-            {
-                return;
-            }
-
             SaveSettings();
             var args = BuildArguments([.. _assFiles]);
             await RunConsoleAsync(consoleExe, args, I18nResources.StatusRunning, I18nResources.StatusDone);
@@ -398,9 +392,6 @@ namespace AssFontSubset.Avalonia.Views
 
             args.Add("--reembed-fonts");
             args.Add(ReembedFonts.IsChecked == true ? "true" : "false");
-
-            args.Add("--replace-original");
-            args.Add(ReplaceOriginal.IsChecked == true ? "true" : "false");
 
             return args;
         }
@@ -582,12 +573,6 @@ namespace AssFontSubset.Avalonia.Views
         {
             var box = MessageBoxManager.GetMessageBoxStandard(title, message, ButtonEnum.Ok, MsBox.Avalonia.Enums.Icon.None, WindowStartupLocation.CenterOwner);
             await box.ShowWindowDialogAsync(this);
-        }
-
-        private async Task<bool> ConfirmAsync(string message)
-        {
-            var box = MessageBoxManager.GetMessageBoxStandard("Confirm", message, ButtonEnum.YesNo, MsBox.Avalonia.Enums.Icon.None, WindowStartupLocation.CenterOwner);
-            return await box.ShowWindowDialogAsync(this) == ButtonResult.Yes;
         }
     }
 }

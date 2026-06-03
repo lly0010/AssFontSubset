@@ -55,11 +55,6 @@ internal static class Program
             Description = "内嵌字体到 ASS 后，不再额外输出独立的子集化字体文件",
             DefaultValueFactory = _ => false,
         };
-        var replaceOriginal = new Option<bool>("--replace-original")
-        {
-            Description = "原地覆盖：用子集化结果覆盖原始 ASS 文件（字体放到原文件同名文件夹），不另建 output 目录",
-            DefaultValueFactory = _ => false,
-        };
         var buildFontDatabase = new Option<FileInfo>("--build-font-database")
         {
             Description = "扫描 --fonts 指定的目录（递归）并将字体索引写入此 JSON 文件，然后退出（不进行子集化）"
@@ -76,7 +71,7 @@ internal static class Program
 
         var rootCommand = new RootCommand("使用 fonttools 或 harfbuzz-subset 生成 ASS 字幕文件的字体子集，并自动修改字体名称及 ASS 文件中对应的字体名称")
         {
-            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase, reembedFonts, embedOnly, replaceOriginal
+            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase, reembedFonts, embedOnly
         };
 
         rootCommand.SetAction(async (result, _) =>
@@ -100,8 +95,7 @@ internal static class Program
                 result.GetValue(separateFontFolder),
                 result.GetValue(fontDatabase),
                 result.GetValue(reembedFonts),
-                result.GetValue(embedOnly),
-                result.GetValue(replaceOriginal)
+                result.GetValue(embedOnly)
             );
         });
         var invocationConfiguration = new InvocationConfiguration
@@ -126,7 +120,7 @@ internal static class Program
         return exitCode;
     }
 
-    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase, bool reembedFonts, bool embedOnly, bool replaceOriginal)
+    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase, bool reembedFonts, bool embedOnly)
     {
         var subsetConfig = new SubsetConfig
         {
@@ -138,7 +132,6 @@ internal static class Program
             FontDatabasePath = fontDatabase?.FullName,
             ReembedFonts = reembedFonts,
             EmbedOnly = embedOnly,
-            ReplaceOriginal = replaceOriginal,
         };
         var logLevel = debug ? LogLevel.Debug : LogLevel.Information;
 
