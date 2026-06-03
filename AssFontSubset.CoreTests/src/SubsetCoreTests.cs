@@ -316,6 +316,39 @@ public class SubsetCoreTests
     }
 
     [TestMethod]
+    public void StripLeadingBlankLines_RemovesLeadingBlankLinesOnly()
+    {
+        var method = typeof(SubsetCore).GetMethod("StripLeadingBlankLines", BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.IsNotNull(method);
+
+        var withBlank = new object?[] { "\n\n[Script Info]\nx\n", null };
+        Assert.IsTrue((bool)method.Invoke(null, withBlank)!);
+        Assert.IsTrue(((string)withBlank[1]!).StartsWith("[Script Info]"));
+
+        var clean = new object?[] { "[Script Info]\nx\n", null };
+        Assert.IsFalse((bool)method.Invoke(null, clean)!);
+    }
+
+    [TestMethod]
+    public void SanitizeFontBytes_DowngradesTruncatedOs2Version()
+    {
+        // Minimal sfnt: 1 table "OS/2" at offset 32, length 78, but version claims 3 (needs 96).
+        var font = new byte[110];
+        font[1] = 0x01; // sfnt version 0x00010000
+        font[5] = 0x01; // numTables = 1
+        font[12] = (byte)'O'; font[13] = (byte)'S'; font[14] = (byte)'/'; font[15] = (byte)'2';
+        font[23] = 32;  // table offset = 32
+        font[27] = 78;  // table length = 78
+        font[32] = 0x00; font[33] = 0x03; // OS/2 version = 3
+
+        var method = typeof(SubsetCore).GetMethod("SanitizeFontBytes", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(method);
+        var result = (byte[])method.Invoke(new SubsetCore(), [font])!;
+
+        Assert.AreEqual(0, (result[32] << 8) | result[33]); // version downgraded to fit 78 bytes
+    }
+
+    [TestMethod]
     public void ExtractEmbeddedFonts_DecodesFullDataFromRawAss()
     {
         var original = new byte[5000];

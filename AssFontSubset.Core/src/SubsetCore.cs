@@ -329,7 +329,7 @@ public class SubsetCore(ILogger? logger = null)
                 if (!seenHashes.Add(hash)) { continue; } // same font embedded in multiple ass
 
                 var dest = Path.Combine(extractDir, $"embedded_{count}{FontExtensionFromBytes(bytes)}");
-                File.WriteAllBytes(dest, bytes);
+                File.WriteAllBytes(dest, SanitizeFontBytes(bytes));
                 count++;
             }
         }
@@ -430,6 +430,47 @@ public class SubsetCore(ILogger? logger = null)
         if (bytes[0] == 't' && bytes[1] == 't' && bytes[2] == 'c' && bytes[3] == 'f') { return ".ttc"; }
         return ".ttf";
     }
+
+    /// <summary>
+    /// Repair an embedded font whose OS/2 table version claims more fields than the table
+    /// actually contains (some subsetters write a too-high version with a truncated table).
+    /// fontTools/pyftsubset crash on this, so downgrade the version to fit the real length.
+    /// </summary>
+    private byte[] SanitizeFontBytes(byte[] bytes)
+    {
+        // Only handle single-font sfnt (TrueType 0x00010000 or OpenType 'OTTO').
+        if (bytes.Length < 12) { return bytes; }
+        var isSfnt = (bytes[0] == 0x00 && bytes[1] == 0x01 && bytes[2] == 0x00 && bytes[3] == 0x00)
+                     || (bytes[0] == 'O' && bytes[1] == 'T' && bytes[2] == 'T' && bytes[3] == 'O');
+        if (!isSfnt) { return bytes; }
+
+        var numTables = (bytes[4] << 8) | bytes[5];
+        for (var i = 0; i < numTables; i++)
+        {
+            var rec = 12 + i * 16;
+            if (rec + 16 > bytes.Length) { break; }
+            if (!(bytes[rec] == 'O' && bytes[rec + 1] == 'S' && bytes[rec + 2] == '/' && bytes[rec + 3] == '2')) { continue; }
+
+            var tableOffset = ReadUInt32BE(bytes, rec + 8);
+            var tableLength = ReadUInt32BE(bytes, rec + 12);
+            if (tableOffset + 2 > bytes.Length) { break; }
+
+            var version = (bytes[(int)tableOffset] << 8) | bytes[(int)tableOffset + 1];
+            var required = version switch { 0 => 78u, 1 => 86u, 2 or 3 or 4 => 96u, 5 => 100u, _ => 78u };
+            if (tableLength < required)
+            {
+                var newVersion = tableLength >= 100 ? 5 : tableLength >= 96 ? 4 : tableLength >= 86 ? 1 : 0;
+                logger?.ZLogDebug($"Fix malformed OS/2 table: version {version} -> {newVersion} (length {tableLength})");
+                bytes[(int)tableOffset] = (byte)(newVersion >> 8);
+                bytes[(int)tableOffset + 1] = (byte)(newVersion & 0xFF);
+            }
+            break;
+        }
+        return bytes;
+    }
+
+    private static uint ReadUInt32BE(byte[] b, int offset) =>
+        (uint)((b[offset] << 24) | (b[offset + 1] << 16) | (b[offset + 2] << 8) | b[offset + 3]);
 
     private IEnumerable<IGrouping<string, FontInfo>> GetFontInfoFromFiles(string dir)
     {
@@ -550,9 +591,14 @@ public class SubsetCore(ILogger? logger = null)
             try
             {
                 var content = File.ReadAllText(assFile.FullName);
-                if (TryNormalizeAssTimeFields(content, out var normalized))
+                // The parser requires the very first line to be a section header, so drop any
+                // leading blank lines / whitespace (some tools prepend an empty line).
+                var leadingStripped = StripLeadingBlankLines(content, out var deblanked);
+                var timesChanged = TryNormalizeAssTimeFields(deblanked, out var normalized);
+                if (leadingStripped || timesChanged)
                 {
-                    logger?.ZLogWarning($"Normalized non-standard event time precision in {assFile.Name}");
+                    if (timesChanged) { logger?.ZLogWarning($"Normalized non-standard event time precision in {assFile.Name}"); }
+                    if (leadingStripped) { logger?.ZLogWarning($"Stripped leading blank line(s) in {assFile.Name}"); }
                     tempPath = Path.Combine(Path.GetTempPath(), "AssFontSubset_" + Guid.NewGuid().ToString("N") + ".ass");
                     File.WriteAllText(tempPath, normalized);
                     parsePath = tempPath;
@@ -585,11 +631,19 @@ public class SubsetCore(ILogger? logger = null)
         return multiAssFonts;
     }
 
-    /// <summary>
-    /// Normalize the Start/End time fields of event lines to standard centisecond format
-    /// (H:MM:SS.cc). Returns true (and the rewritten content) only when something changed,
-    /// so well-formed ass files are left untouched.
-    /// </summary>
+    /// <summary>Remove leading blank lines / whitespace / BOM so the first line is a section header.</summary>
+    internal static bool StripLeadingBlankLines(string content, out string result)
+    {
+        var trimmed = content.TrimStart('\uFEFF', '\n', '\r', ' ', '\t');
+        if (trimmed.Length == content.Length)
+        {
+            result = content;
+            return false;
+        }
+        result = trimmed;
+        return true;
+    }
+
     internal static bool TryNormalizeAssTimeFields(string content, out string normalized)
     {
         var lines = content.Split('\n');
