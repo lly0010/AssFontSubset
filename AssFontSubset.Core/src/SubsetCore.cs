@@ -94,9 +94,9 @@ public class SubsetCore(ILogger? logger = null)
             }
             finally
             {
-                if (extractDir is not null && !subsetConfig.DebugMode && Directory.Exists(extractDir))
+                if (extractDir is not null && !subsetConfig.DebugMode)
                 {
-                    Directory.Delete(extractDir, true);
+                    TryDeleteDirectory(extractDir);
                 }
             }
         });
@@ -216,6 +216,12 @@ public class SubsetCore(ILogger? logger = null)
         logger?.ZLogInformation($"Extracted {count} embedded fonts");
         var fontInfos = FontParse.GetFontInfos(new DirectoryInfo(extractDir));
 
+        // Mobsub.Font keeps each parsed font file open until GC. Release the handles now so the
+        // subset tools can read them, and the temp dir can be deleted, on Windows (which locks
+        // files with open handles).
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+
         _stopwatch.Stop();
         logger?.ZLogDebug($"Embedded font extraction completed, use {_stopwatch.ElapsedMilliseconds} ms");
         _stopwatch.Reset();
@@ -274,6 +280,25 @@ public class SubsetCore(ILogger? logger = null)
         Flush();
 
         return results;
+    }
+
+    /// <summary>Delete a directory, retrying after GC in case a font handle is briefly still open (Windows).</summary>
+    private void TryDeleteDirectory(string dir)
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                if (Directory.Exists(dir)) { Directory.Delete(dir, true); }
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                logger?.ZLogDebug($"Temp dir cleanup retry ({attempt + 1}): {ex.Message}");
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+        }
     }
 
     private static string FontExtensionFromBytes(byte[] bytes)
