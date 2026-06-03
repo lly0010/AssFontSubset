@@ -105,6 +105,33 @@ namespace AssFontSubset.Avalonia.I18n {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Replace Original.
+        /// </summary>
+        public static string ReplaceOriginal {
+            get {
+                return ResourceManager.GetString("ReplaceOriginal", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to DESTRUCTIVE: overwrite the original ass files in place....
+        /// </summary>
+        public static string ReplaceOriginalTip {
+            get {
+                return ResourceManager.GetString("ReplaceOriginalTip", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This will OVERWRITE the original ass files in place....
+        /// </summary>
+        public static string ReplaceOriginalConfirm {
+            get {
+                return ResourceManager.GetString("ReplaceOriginalConfirm", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Re-embed.
         /// </summary>
         public static string ReembedFonts {
