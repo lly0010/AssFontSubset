@@ -34,6 +34,8 @@ Options:
 ```
 
 > `--reembed-fonts`：针对**已内嵌字体的 ASS**。直接从其 `[Fonts]` 段解码取出内嵌字体作为字体源，删除原有内嵌,重新子集化后再内嵌一次（无需外部字体文件）。可把臃肿/未子集化的内嵌 ASS 重新瘦身。
+>
+> 若字幕事件时间为非标准格式（如毫秒精度 `0:00:01.234`），会在读取时自动规整为标准厘秒格式（`H:MM:SS.cc`）后再处理；标准字幕不受影响。
 
 > `--build-font-database <db.json>` 配合 `--fonts <目录>` 使用：递归扫描该目录下的字体，将每个字体的 families / fullnames / psnames / weight / slant / path / index / last_write_time 写入 JSON 索引，便于快速查找字体。
 >
