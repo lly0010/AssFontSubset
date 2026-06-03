@@ -316,6 +316,28 @@ public class SubsetCoreTests
     }
 
     [TestMethod]
+    public void HasEmbeddedFonts_DetectsFontsSection()
+    {
+        var method = typeof(SubsetCore).GetMethod("HasEmbeddedFonts", BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.IsNotNull(method);
+
+        var withFonts = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".ass");
+        var without = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".ass");
+        File.WriteAllText(withFonts, "[Script Info]\n\n[Fonts]\nfontname: x.ttf\n!!!!\n\n[Events]\n");
+        File.WriteAllText(without, "[Script Info]\n\n[Events]\nDialogue: 0,0:00:00.00,0:00:01.00,D,,0,0,0,,hi\n");
+        try
+        {
+            Assert.IsTrue((bool)method.Invoke(null, [withFonts])!);
+            Assert.IsFalse((bool)method.Invoke(null, [without])!);
+        }
+        finally
+        {
+            File.Delete(withFonts);
+            File.Delete(without);
+        }
+    }
+
+    [TestMethod]
     public void StripLeadingBlankLines_RemovesLeadingBlankLinesOnly()
     {
         var method = typeof(SubsetCore).GetMethod("StripLeadingBlankLines", BindingFlags.Static | BindingFlags.NonPublic);
