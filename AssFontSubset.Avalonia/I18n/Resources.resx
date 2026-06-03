@@ -138,6 +138,15 @@
     <data name="EmbedOnlyTip" xml:space="preserve">
         <value>When embedding fonts, do not also output the loose subset font files (keep only the self-contained ass).</value>
     </data>
+    <data name="ReplaceOriginal" xml:space="preserve">
+        <value>Replace Original</value>
+    </data>
+    <data name="ReplaceOriginalTip" xml:space="preserve">
+        <value>DESTRUCTIVE: overwrite the original ass files in place (fonts go in a same-named folder next to them), no separate output folder. Off every launch; enable manually.</value>
+    </data>
+    <data name="ReplaceOriginalConfirm" xml:space="preserve">
+        <value>This will OVERWRITE the original ass files in place and cannot be undone. Continue?</value>
+    </data>
     <data name="ReembedFonts" xml:space="preserve">
         <value>Re-embed</value>
     </data>
