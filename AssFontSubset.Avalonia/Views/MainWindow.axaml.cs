@@ -59,7 +59,6 @@ namespace AssFontSubset.Avalonia.Views
             SourceHanEllipsis.IsChecked = settings.SourceHanEllipsis;
             Debug.IsChecked = settings.Debug;
             EmbedFontToAss.IsChecked = settings.EmbedFontToAss;
-            SeparateFontFolder.IsChecked = settings.SeparateFontFolder;
             EmbedOnly.IsChecked = settings.EmbedOnly;
             ReembedFonts.IsChecked = settings.ReembedFonts;
         }
@@ -75,7 +74,6 @@ namespace AssFontSubset.Avalonia.Views
                 SourceHanEllipsis = SourceHanEllipsis.IsChecked == true,
                 Debug = Debug.IsChecked == true,
                 EmbedFontToAss = EmbedFontToAss.IsChecked == true,
-                SeparateFontFolder = SeparateFontFolder.IsChecked == true,
                 EmbedOnly = EmbedOnly.IsChecked == true,
                 ReembedFonts = ReembedFonts.IsChecked == true,
             }.Save();
@@ -384,8 +382,9 @@ namespace AssFontSubset.Avalonia.Views
             args.Add("--embed-font-to-ass");
             args.Add(EmbedFontToAss.IsChecked == true ? "true" : "false");
 
+            // Fonts into a same-named folder is the default (the toggle was removed from the UI).
             args.Add("--separate-font-folder");
-            args.Add(SeparateFontFolder.IsChecked == true ? "true" : "false");
+            args.Add("true");
 
             args.Add("--embed-only");
             args.Add(EmbedOnly.IsChecked == true ? "true" : "false");
@@ -587,7 +586,7 @@ namespace AssFontSubset.Avalonia.Views
 
         private async Task<bool> ConfirmAsync(string message)
         {
-            var box = MessageBoxManager.GetMessageBoxStandard("Confirm", message, ButtonEnum.YesNo, MsBox.Avalonia.Enums.Icon.Warning, WindowStartupLocation.CenterOwner);
+            var box = MessageBoxManager.GetMessageBoxStandard("Confirm", message, ButtonEnum.YesNo, MsBox.Avalonia.Enums.Icon.None, WindowStartupLocation.CenterOwner);
             return await box.ShowWindowDialogAsync(this) == ButtonResult.Yes;
         }
     }
