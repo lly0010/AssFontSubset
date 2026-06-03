@@ -36,70 +36,103 @@ public class SubsetCore(ILogger? logger = null)
 
         await Task.Run(() =>
         {
-            var assFonts = GetAssFontInfoFromFiles(path, optDir, out var assMulti);
-
-            string? extractDir = null;
-            try
+            // Re-embed: each ass already carries only its own glyphs, so process every file
+            // independently (pooling embedded fonts across files would mix partial subsets).
+            if (subsetConfig.ReembedFonts)
             {
-                IEnumerable<IGrouping<string, FontInfo>> fontInfos;
-                if (subsetConfig.ReembedFonts)
+                Directory.CreateDirectory(optDir);
+                foreach (var assFile in path)
                 {
-                    extractDir = Path.Combine(Path.GetTempPath(), "AssFontSubset_extract_" + Guid.NewGuid().ToString("N"));
-                    fontInfos = GetFontInfoFromExtractedFonts(path, extractDir);
+                    ReembedOneFile(assFile, optDir, binPath, subsetConfig);
                 }
-                else if (useDatabase)
-                {
-                    fontInfos = GetFontInfoFromDatabase(subsetConfig.FontDatabasePath!, assFonts.Keys);
-                }
-                else
-                {
-                    fontInfos = GetFontInfoFromFiles(fontDir);
-                }
-
-                var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
-                Dictionary<string, string> nameMap = [];
-
-                switch (subsetConfig.Backend)
-                {
-                    case SubsetBackend.PyFontTools:
-                        var pyftsubset = binPath is null ? "pyftsubset" : Path.Combine(binPath.FullName, "pyftsubset");
-                        var ttx = binPath is null ? "ttx" : Path.Combine(binPath.FullName, "ttx");
-                        var pyFT = new PyFontTools(pyftsubset, ttx, logger) { Config = subsetConfig, sw = _stopwatch };
-                        pyFT.SubsetFonts(subsetFonts, optDir, out nameMap);
-                        break;
-                    case SubsetBackend.HarfBuzzSubset:
-                        var hbss = new HarfBuzzSubset(logger) { Config = subsetConfig, sw = _stopwatch };
-                        hbss.SubsetFonts(subsetFonts, optDir, out nameMap);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-
-                var embeddedFonts = embedToAss ? EncodeSubsetFonts(optDir) : [];
-
-                foreach (var kv in assMulti)
-                {
-                    ChangeAssFontName(kv.Value, nameMap, fontMap);
-                    if (embeddedFonts.Count > 0)
-                    {
-                        EmbedFontsToAss(kv.Value, embeddedFonts);
-                    }
-                    kv.Value.WriteAssFile(kv.Key);
-                }
-
-                if (subsetConfig.SeparateFontFolder)
-                {
-                    MoveFontsToAssFolders(optDir, assMulti.Keys);
-                }
+                return;
             }
-            finally
+
+            var assFonts = GetAssFontInfoFromFiles(path, optDir, out var assMulti);
+            var fontInfos = useDatabase
+                ? GetFontInfoFromDatabase(subsetConfig.FontDatabasePath!, assFonts.Keys)
+                : GetFontInfoFromFiles(fontDir);
+
+            var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
+            RunSubsetBackend(subsetFonts, optDir, binPath, subsetConfig, out var nameMap);
+
+            var embeddedFonts = embedToAss ? EncodeSubsetFonts(optDir) : [];
+
+            foreach (var kv in assMulti)
             {
-                if (extractDir is not null && !subsetConfig.DebugMode)
+                ChangeAssFontName(kv.Value, nameMap, fontMap);
+                if (embeddedFonts.Count > 0)
                 {
-                    TryDeleteDirectory(extractDir);
+                    EmbedFontsToAss(kv.Value, embeddedFonts);
                 }
+                kv.Value.WriteAssFile(kv.Key);
+            }
+
+            if (subsetConfig.SeparateFontFolder)
+            {
+                MoveFontsToAssFolders(optDir, assMulti.Keys);
             }
         });
+    }
+
+    private void RunSubsetBackend(Dictionary<string, List<SubsetFont>> subsetFonts, string outDir, DirectoryInfo? binPath, SubsetConfig config, out Dictionary<string, string> nameMap)
+    {
+        nameMap = [];
+        switch (config.Backend)
+        {
+            case SubsetBackend.PyFontTools:
+                var pyftsubset = binPath is null ? "pyftsubset" : Path.Combine(binPath.FullName, "pyftsubset");
+                var ttx = binPath is null ? "ttx" : Path.Combine(binPath.FullName, "ttx");
+                var pyFT = new PyFontTools(pyftsubset, ttx, logger) { Config = config, sw = _stopwatch };
+                pyFT.SubsetFonts(subsetFonts, outDir, out nameMap);
+                break;
+            case SubsetBackend.HarfBuzzSubset:
+                var hbss = new HarfBuzzSubset(logger) { Config = config, sw = _stopwatch };
+                hbss.SubsetFonts(subsetFonts, outDir, out nameMap);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    /// <summary>
+    /// Re-subset and re-embed a single already-embedded ass file: extract its embedded fonts,
+    /// subset them to this file's glyphs in an isolated temp dir, then embed the result back.
+    /// The output is the self-contained ass at optDir/&lt;name&gt; (no loose font files).
+    /// </summary>
+    private void ReembedOneFile(FileInfo assFile, string optDir, DirectoryInfo? binPath, SubsetConfig config)
+    {
+        var extractDir = Path.Combine(Path.GetTempPath(), "AssFontSubset_extract_" + Guid.NewGuid().ToString("N"));
+        var subsetDir = Path.Combine(Path.GetTempPath(), "AssFontSubset_subset_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(subsetDir);
+
+            var assFonts = GetAssFontInfoFromFiles([assFile], optDir, out var assMulti);
+            var fontInfos = GetFontInfoFromExtractedFonts([assFile], extractDir);
+            var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
+            RunSubsetBackend(subsetFonts, subsetDir, binPath, config, out var nameMap);
+
+            var embeddedFonts = EncodeSubsetFonts(subsetDir);
+            foreach (var kv in assMulti)
+            {
+                ChangeAssFontName(kv.Value, nameMap, fontMap);
+                EmbedFontsToAss(kv.Value, embeddedFonts);
+                kv.Value.WriteAssFile(kv.Key);
+            }
+        }
+        finally
+        {
+            if (config.DebugMode)
+            {
+                logger?.ZLogInformation($"Reembed temp dirs kept: {extractDir} , {subsetDir}");
+            }
+            else
+            {
+                TryDeleteDirectory(extractDir);
+                TryDeleteDirectory(subsetDir);
+            }
+        }
     }
 
     private static readonly string[] FontExtensions = [".ttf", ".otf"];
