@@ -52,42 +52,28 @@ public class SubsetCore(ILogger? logger = null)
                 if (subsetConfig.ReembedFonts)
                 {
                     Directory.CreateDirectory(optDir);
-                    foreach (var assFile in path)
+                    var embedded = path.Where(f => HasEmbeddedFonts(f.FullName)).ToArray();
+                    var plain = path.Where(f => !HasEmbeddedFonts(f.FullName)).ToArray();
+
+                    foreach (var assFile in embedded)
                     {
                         ReembedOneFile(assFile, optDir, binPath, subsetConfig);
+                    }
+
+                    // Files without embedded fonts fall back to normal subsetting from the fonts
+                    // directory / database (still embedding the result).
+                    if (plain.Length > 0)
+                    {
+                        if (!useDatabase && !fontPath.Exists)
+                        {
+                            throw new Exception($"These ass have no embedded fonts and need a fonts directory: {string.Join("、", plain.Select(p => p.Name))}. Please check if directory {fontPath} exists");
+                        }
+                        SubsetNormal(plain, optDir, fontDir, useDatabase, subsetConfig, binPath, embedToAss);
                     }
                 }
                 else
                 {
-                    var assFonts = GetAssFontInfoFromFiles(path, optDir, out var assMulti);
-                    var fontInfos = useDatabase
-                        ? GetFontInfoFromDatabase(subsetConfig.FontDatabasePath!, assFonts.Keys)
-                        : GetFontInfoFromFiles(fontDir);
-
-                    var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
-                    RunSubsetBackend(subsetFonts, optDir, binPath, subsetConfig, out var nameMap);
-
-                    var embeddedFonts = embedToAss ? EncodeSubsetFonts(optDir) : [];
-
-                    foreach (var kv in assMulti)
-                    {
-                        ChangeAssFontName(kv.Value, nameMap, fontMap);
-                        if (embeddedFonts.Count > 0)
-                        {
-                            EmbedFontsToAss(kv.Value, embeddedFonts);
-                        }
-                        kv.Value.WriteAssFile(kv.Key);
-                    }
-
-                    if (embedToAss && subsetConfig.EmbedOnly)
-                    {
-                        // Fonts are embedded; drop the loose subset font files.
-                        DeleteSubsetFontFiles(optDir);
-                    }
-                    else if (subsetConfig.SeparateFontFolder)
-                    {
-                        MoveFontsToAssFolders(optDir, assMulti.Keys);
-                    }
+                    SubsetNormal(path, optDir, fontDir, useDatabase, subsetConfig, binPath, embedToAss);
                 }
 
                 if (replaceOriginal)
@@ -103,6 +89,59 @@ public class SubsetCore(ILogger? logger = null)
                 }
             }
         });
+    }
+
+    /// <summary>Normal subsetting: source fonts from the fonts directory or font database.</summary>
+    private void SubsetNormal(FileInfo[] files, string optDir, string fontDir, bool useDatabase, SubsetConfig config, DirectoryInfo? binPath, bool embedToAss)
+    {
+        var assFonts = GetAssFontInfoFromFiles(files, optDir, out var assMulti);
+        var fontInfos = useDatabase
+            ? GetFontInfoFromDatabase(config.FontDatabasePath!, assFonts.Keys)
+            : GetFontInfoFromFiles(fontDir);
+
+        var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
+        RunSubsetBackend(subsetFonts, optDir, binPath, config, out var nameMap);
+
+        var embeddedFonts = embedToAss ? EncodeSubsetFonts(optDir) : [];
+
+        foreach (var kv in assMulti)
+        {
+            ChangeAssFontName(kv.Value, nameMap, fontMap);
+            if (embeddedFonts.Count > 0)
+            {
+                EmbedFontsToAss(kv.Value, embeddedFonts);
+            }
+            kv.Value.WriteAssFile(kv.Key);
+        }
+
+        if (embedToAss && config.EmbedOnly)
+        {
+            DeleteSubsetFontFiles(optDir);
+        }
+        else if (config.SeparateFontFolder)
+        {
+            MoveFontsToAssFolders(optDir, assMulti.Keys);
+        }
+    }
+
+    /// <summary>Quick check whether an ass file has at least one embedded font in its [Fonts] section.</summary>
+    private static bool HasEmbeddedFonts(string assPath)
+    {
+        var inFonts = false;
+        foreach (var line in File.ReadLines(assPath))
+        {
+            var t = line.Trim();
+            if (t.Length >= 2 && t[0] == '[' && t[^1] == ']')
+            {
+                inFonts = t[1..^1].Equals("Fonts", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+            if (inFonts && line.StartsWith("fontname:", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>
