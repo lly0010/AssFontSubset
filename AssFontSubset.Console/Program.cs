@@ -48,6 +48,11 @@ internal static class Program
         var separateFontFolder = new Option<bool>("--separate-font-folder")
         {
             Description = "将子集化字体放入与 ASS 文件同名的子文件夹中",
+            DefaultValueFactory = _ => true,
+        };
+        var embedOnly = new Option<bool>("--embed-only")
+        {
+            Description = "内嵌字体到 ASS 后，不再额外输出独立的子集化字体文件",
             DefaultValueFactory = _ => false,
         };
         var buildFontDatabase = new Option<FileInfo>("--build-font-database")
@@ -66,7 +71,7 @@ internal static class Program
 
         var rootCommand = new RootCommand("使用 fonttools 或 harfbuzz-subset 生成 ASS 字幕文件的字体子集，并自动修改字体名称及 ASS 文件中对应的字体名称")
         {
-            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase, reembedFonts
+            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase, reembedFonts, embedOnly
         };
 
         rootCommand.SetAction(async (result, _) =>
@@ -89,7 +94,8 @@ internal static class Program
                 result.GetValue(embedFontToAss),
                 result.GetValue(separateFontFolder),
                 result.GetValue(fontDatabase),
-                result.GetValue(reembedFonts)
+                result.GetValue(reembedFonts),
+                result.GetValue(embedOnly)
             );
         });
         var invocationConfiguration = new InvocationConfiguration
@@ -114,7 +120,7 @@ internal static class Program
         return exitCode;
     }
 
-    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase, bool reembedFonts)
+    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase, bool reembedFonts, bool embedOnly)
     {
         var subsetConfig = new SubsetConfig
         {
@@ -125,6 +131,7 @@ internal static class Program
             SeparateFontFolder = separateFontFolder,
             FontDatabasePath = fontDatabase?.FullName,
             ReembedFonts = reembedFonts,
+            EmbedOnly = embedOnly,
         };
         var logLevel = debug ? LogLevel.Debug : LogLevel.Information;
 

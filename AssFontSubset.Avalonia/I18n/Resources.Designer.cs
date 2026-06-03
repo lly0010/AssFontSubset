@@ -87,6 +87,24 @@ namespace AssFontSubset.Avalonia.I18n {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Embed Only.
+        /// </summary>
+        public static string EmbedOnly {
+            get {
+                return ResourceManager.GetString("EmbedOnly", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to When embedding fonts, do not also output the loose subset font files....
+        /// </summary>
+        public static string EmbedOnlyTip {
+            get {
+                return ResourceManager.GetString("EmbedOnlyTip", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Re-embed.
         /// </summary>
         public static string ReembedFonts {

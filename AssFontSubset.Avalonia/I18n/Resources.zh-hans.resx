@@ -122,6 +122,12 @@
     <data name="StatusDbBuilt" xml:space="preserve">
         <value>字体数据库已生成。</value>
     </data>
+    <data name="EmbedOnly" xml:space="preserve">
+        <value>仅内嵌</value>
+    </data>
+    <data name="EmbedOnlyTip" xml:space="preserve">
+        <value>内嵌字体到 ASS 后，不再额外输出独立的子集化字体文件（只保留自带字体的 ass）。</value>
+    </data>
     <data name="ReembedFonts" xml:space="preserve">
         <value>重新内嵌</value>
     </data>

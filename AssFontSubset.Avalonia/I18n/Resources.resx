@@ -132,6 +132,12 @@
     <data name="StatusDbBuilt" xml:space="preserve">
         <value>Font database built.</value>
     </data>
+    <data name="EmbedOnly" xml:space="preserve">
+        <value>Embed Only</value>
+    </data>
+    <data name="EmbedOnlyTip" xml:space="preserve">
+        <value>When embedding fonts, do not also output the loose subset font files (keep only the self-contained ass).</value>
+    </data>
     <data name="ReembedFonts" xml:space="preserve">
         <value>Re-embed</value>
     </data>
