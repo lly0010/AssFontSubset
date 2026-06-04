@@ -68,10 +68,15 @@ internal static class Program
             Description = "以 ASS 文件中已内嵌的字体为字体源：删除原有内嵌，重新子集化并重新内嵌",
             DefaultValueFactory = _ => false,
         };
+        var fontFallback = new Option<bool>("--font-fallback")
+        {
+            Description = "缺少字体时，自动改用当前字幕的主字体（用字最多的台词字体）来子集化",
+            DefaultValueFactory = _ => false,
+        };
 
         var rootCommand = new RootCommand("使用 fonttools 或 harfbuzz-subset 生成 ASS 字幕文件的字体子集，并自动修改字体名称及 ASS 文件中对应的字体名称")
         {
-            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase, reembedFonts, embedOnly
+            path, fontPath, outputPath, subsetBackend, binPath, sourceHanEllipsis, debug, embedFontToAss, separateFontFolder, buildFontDatabase, fontDatabase, reembedFonts, embedOnly, fontFallback
         };
 
         rootCommand.SetAction(async (result, _) =>
@@ -95,7 +100,8 @@ internal static class Program
                 result.GetValue(separateFontFolder),
                 result.GetValue(fontDatabase),
                 result.GetValue(reembedFonts),
-                result.GetValue(embedOnly)
+                result.GetValue(embedOnly),
+                result.GetValue(fontFallback)
             );
         });
         var invocationConfiguration = new InvocationConfiguration
@@ -120,7 +126,7 @@ internal static class Program
         return exitCode;
     }
 
-    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase, bool reembedFonts, bool embedOnly)
+    static async Task Subset(FileInfo[] path, DirectoryInfo? fontPath, DirectoryInfo? outputPath, SubsetBackend subsetBackend, DirectoryInfo? binPath, bool sourceHanEllipsis, bool debug, bool embedFontToAss, bool separateFontFolder, FileInfo? fontDatabase, bool reembedFonts, bool embedOnly, bool fontFallback)
     {
         var subsetConfig = new SubsetConfig
         {
@@ -132,6 +138,7 @@ internal static class Program
             FontDatabasePath = fontDatabase?.FullName,
             ReembedFonts = reembedFonts,
             EmbedOnly = embedOnly,
+            FontFallback = fontFallback,
         };
         var logLevel = debug ? LogLevel.Debug : LogLevel.Information;
 

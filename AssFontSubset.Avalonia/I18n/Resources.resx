@@ -141,6 +141,12 @@
     <data name="ReembedFonts" xml:space="preserve">
         <value>Re-embed</value>
     </data>
+    <data name="FontFallback" xml:space="preserve">
+        <value>Font Fallback</value>
+    </data>
+    <data name="FontFallbackTip" xml:space="preserve">
+        <value>When a font is missing, fall back to the subtitle's main (dialogue) font — the one used by the most text — instead of failing.</value>
+    </data>
     <data name="ReembedFontsTip" xml:space="preserve">
         <value>For ass files that already contain embedded fonts: use those embedded fonts as the source, drop the old embedding and re-subset + re-embed. No external font files needed.</value>
     </data>
