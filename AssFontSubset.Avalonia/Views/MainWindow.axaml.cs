@@ -61,6 +61,7 @@ namespace AssFontSubset.Avalonia.Views
             EmbedFontToAss.IsChecked = settings.EmbedFontToAss;
             EmbedOnly.IsChecked = settings.EmbedOnly;
             ReembedFonts.IsChecked = settings.ReembedFonts;
+            FontFallback.IsChecked = settings.FontFallback;
         }
 
         private void SaveSettings()
@@ -76,6 +77,7 @@ namespace AssFontSubset.Avalonia.Views
                 EmbedFontToAss = EmbedFontToAss.IsChecked == true,
                 EmbedOnly = EmbedOnly.IsChecked == true,
                 ReembedFonts = ReembedFonts.IsChecked == true,
+                FontFallback = FontFallback.IsChecked == true,
             }.Save();
         }
 
@@ -392,6 +394,9 @@ namespace AssFontSubset.Avalonia.Views
 
             args.Add("--reembed-fonts");
             args.Add(ReembedFonts.IsChecked == true ? "true" : "false");
+
+            args.Add("--font-fallback");
+            args.Add(FontFallback.IsChecked == true ? "true" : "false");
 
             return args;
         }

@@ -131,6 +131,12 @@
     <data name="ReembedFonts" xml:space="preserve">
         <value>重新内嵌</value>
     </data>
+    <data name="FontFallback" xml:space="preserve">
+        <value>字体补充</value>
+    </data>
+    <data name="FontFallbackTip" xml:space="preserve">
+        <value>缺少字体时，自动改用当前字幕的主字体（用字最多的台词字体）来子集化，而不是报错。</value>
+    </data>
     <data name="ReembedFontsTip" xml:space="preserve">
         <value>针对已内嵌字体的 ASS：以其内嵌字体为字体源，删除原有内嵌，重新子集化并重新内嵌。无需外部字体文件。</value>
     </data>

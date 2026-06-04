@@ -20,6 +20,7 @@ public sealed class AppSettings
     public bool SeparateFontFolder { get; set; } = true;
     public bool EmbedOnly { get; set; }
     public bool ReembedFonts { get; set; }
+    public bool FontFallback { get; set; }
 
     private static string SettingsPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

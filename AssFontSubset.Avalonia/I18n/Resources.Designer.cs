@@ -105,6 +105,24 @@ namespace AssFontSubset.Avalonia.I18n {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Font Fallback.
+        /// </summary>
+        public static string FontFallback {
+            get {
+                return ResourceManager.GetString("FontFallback", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to When a font is missing, fall back to the main font....
+        /// </summary>
+        public static string FontFallbackTip {
+            get {
+                return ResourceManager.GetString("FontFallbackTip", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Re-embed.
         /// </summary>
         public static string ReembedFonts {

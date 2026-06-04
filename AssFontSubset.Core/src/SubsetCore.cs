@@ -67,7 +67,7 @@ public class SubsetCore(ILogger? logger = null)
             ? GetFontInfoFromDatabase(config.FontDatabasePath!, assFonts.Keys)
             : GetFontInfoFromFiles(fontDir);
 
-        var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
+        var subsetFonts = GetSubsetFonts(fontInfos, assFonts, config.FontFallback, out var fontMap);
         RunSubsetBackend(subsetFonts, optDir, binPath, config, out var nameMap);
 
         var embeddedFonts = embedToAss ? EncodeSubsetFonts(optDir) : [];
@@ -147,7 +147,7 @@ public class SubsetCore(ILogger? logger = null)
 
             var assFonts = GetAssFontInfoFromFiles([assFile], optDir, out var assMulti);
             var fontInfos = GetFontInfoFromExtractedFonts([assFile], extractDir);
-            var subsetFonts = GetSubsetFonts(fontInfos, assFonts, out var fontMap);
+            var subsetFonts = GetSubsetFonts(fontInfos, assFonts, config.FontFallback, out var fontMap);
             RunSubsetBackend(subsetFonts, subsetDir, binPath, config, out var nameMap);
 
             var embeddedFonts = EncodeSubsetFonts(subsetDir);
@@ -695,7 +695,7 @@ public class SubsetCore(ILogger? logger = null)
         return s.Length > 0;
     }
 
-    Dictionary<string, List<SubsetFont>> GetSubsetFonts(IEnumerable<IGrouping<string, FontInfo>> fontInfos, Dictionary<AssFontInfo, HashSet<Rune>> assFonts, out Dictionary<FontInfo, List<AssFontInfo>> fontMap)
+    Dictionary<string, List<SubsetFont>> GetSubsetFonts(IEnumerable<IGrouping<string, FontInfo>> fontInfos, Dictionary<AssFontInfo, HashSet<Rune>> assFonts, bool fontFallback, out Dictionary<FontInfo, List<AssFontInfo>> fontMap)
     {
         logger?.ZLogInformation($"Start generate subset font info");
         _stopwatch.Start();
@@ -728,7 +728,22 @@ public class SubsetCore(ILogger? logger = null)
         if (matchedAssFontInfos.Count != assFonts.Keys.Count)
         {
             var notFound = assFonts.Keys.Except(matchedAssFontInfos).ToList();
-            throw new Exception($"Not found font file: {string.Join("、", notFound.Select(x => x.ToString()))}");
+            if (fontFallback && fontMap.Count > 0)
+            {
+                // Use the subtitle's main (dialogue) font — the matched font covering the most text —
+                // for the missing ones: merge their glyphs in and rename them to it.
+                var mainFont = fontMap.OrderByDescending(kv => kv.Value.Sum(afi => assFonts[afi].Count)).First().Key;
+                foreach (var afi in notFound)
+                {
+                    fontMap[mainFont].Add(afi);
+                    matchedAssFontInfos.Add(afi);
+                    logger?.ZLogWarning($"Font not found, fallback to main font {mainFont.FamilyNames[FontConstant.LanguageIdEnUs]}: {afi.ToString()}");
+                }
+            }
+            else
+            {
+                throw new Exception($"Not found font file: {string.Join("、", notFound.Select(x => x.ToString()))}");
+            }
         }
 
         logger?.ZLogDebug($"Start convert font file info to subset font info");

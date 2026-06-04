@@ -427,6 +427,43 @@ public class SubsetCoreTests
         method.Invoke(null, [ass, embeddedFonts]);
     }
 
+    [TestMethod]
+    public void GetSubsetFonts_FontFallback_RemapsMissingToMainFont()
+    {
+        var fnDict = new Dictionary<int, string> { [1033] = "Main" };
+        var mainFi = new FontInfo { FamilyNames = fnDict, MatchNames = ["Main"], Bold = false, Italic = false, Weight = 400, FileName = "main.ttf", Index = 0, MaxpNumGlyphs = 3000 };
+        var fontInfos = new List<FontInfo> { mainFi }.GroupBy(fi => fi.FamilyNames[1033]);
+
+        var mainAfi = CreateAssFontInfo("Main", 0, false);     // matches mainFi
+        var missingAfi = CreateAssFontInfo("Missing", 0, false); // no font available
+        var assFonts = new Dictionary<AssFontInfo, HashSet<Rune>>
+        {
+            [mainAfi] = [new Rune('A'), new Rune('B'), new Rune('C')], // main has more text -> chosen as main
+            [missingAfi] = [new Rune('X')],
+        };
+
+        var method = typeof(SubsetCore).GetMethod("GetSubsetFonts", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.IsNotNull(method);
+
+        // Without fallback -> throws "Not found font file".
+        var noFallback = new object?[] { fontInfos, assFonts, false, null };
+        try
+        {
+            method.Invoke(new SubsetCore(), noFallback);
+            Assert.Fail("expected a 'Not found font file' exception");
+        }
+        catch (TargetInvocationException ex)
+        {
+            StringAssert.Contains(ex.InnerException!.Message, "Not found font file");
+        }
+
+        // With fallback -> missing font is merged into the main font (no throw).
+        var withFallback = new object?[] { fontInfos, assFonts, true, null };
+        method.Invoke(new SubsetCore(), withFallback);
+        var fontMap = (Dictionary<FontInfo, List<AssFontInfo>>)withFallback[3]!;
+        CollectionAssert.Contains(fontMap[mainFi], missingAfi);
+    }
+
     private static void InvokeChangeAssFontName(AssData ass, Dictionary<string, string> nameMap, Dictionary<FontInfo, List<AssFontInfo>> fontMap)
     {
         var method = typeof(SubsetCore).GetMethod("ChangeAssFontName", BindingFlags.Static | BindingFlags.NonPublic);
